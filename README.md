@@ -3,14 +3,14 @@
 This is my Creative Core final project prototype built completely from scratch.  
 The goal is to showcase Unity’s core creative systems (Shaders, Lighting, Animation, VFX, Cameras, UI, Sound, and Post-Processing) through a mini puzzle experience.
 
-## 🎮 Concept
+##  Concept
 You start in a small puzzle room.  
 - The door is locked.  
 - Find and interact with a button.  
 - When pressed, the environment reacts: lights turn on, particles appear, sound plays, and the door opens.  
 - Step outside to complete the scene.
 
-## 🛠️ Features
+##  Features
 - Custom models created in **Blender**  
 - Scripts written from scratch in **C#**  
 - Interaction system (button & door logic)  
@@ -21,11 +21,11 @@ You start in a small puzzle room.
 - UI prompts (Press E to interact)  
 - Post-processing (bloom, color grading, ambient occlusion)
 
-## 🚀 Build
+##  Build
 - Playable build will be published on **Unity Play** (WebGL).  
 - Source code and assets are fully available in this repository.
 
-## 📌 Status
+##  Status
 Currently in development – models, scripts, and polish will be added step by step.
 ---
 
