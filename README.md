@@ -3,6 +3,9 @@
 This is my Creative Core final project prototype built completely from scratch.  
 The goal is to showcase Unity’s core creative systems (Shaders, Lighting, Animation, VFX, Cameras, UI, Sound, and Post-Processing) through a mini puzzle experience.
 
+<img width="1549" height="890" alt="image" src="https://github.com/user-attachments/assets/c6a3a5a1-dab3-49de-b659-01cf86850291" />
+
+
 ##  Concept
 You start in a small puzzle room.  
 - The door is locked.  
