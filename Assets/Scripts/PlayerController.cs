@@ -26,7 +26,6 @@ public class PlayerController : MonoBehaviour
         Cursor.visible = false;
     }
 
-    // 🎮 Yeni Input System Eventleri
     public void OnMove(InputAction.CallbackContext context)
     {
         moveInput = context.ReadValue<Vector2>();
