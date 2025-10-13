@@ -14,54 +14,54 @@ public class SacredSwordController : MonoBehaviour
     [Header("Settings")]
     public float interactDistance = 5f;
 
-    private InputAction interactAction;
-    private bool isActivated = false;
     private Transform player;
+    private bool isActivated = false;
+    private InputAction interactAction;
 
-    void Start()
+    private void Start()
     {
-        player = playerInput.transform;
-        interactAction = playerInput.actions["Interact"]; // ✅ doğru isim!
-        fireEffect.Stop();
-        swordLight.enabled = false;
+        player = GameObject.FindGameObjectWithTag("Player").transform;
+
+        if (fireEffect != null)
+            fireEffect.Stop();
+
+        if (swordLight != null)
+            swordLight.enabled = false;
+
+        if (playerInput != null)
+            interactAction = playerInput.actions["Interact"];
     }
 
-    void Update()
+    private void Update()
     {
-        if (player == null) return;
+        if (player == null || interactAction == null)
+            return;
 
         float distance = Vector3.Distance(player.position, transform.position);
 
-        if (distance < interactDistance && !isActivated)
+        if (!isActivated && distance < interactDistance)
         {
-            messageUI.ShowMessage("Press [E] to ignite the sacred sword.");
-
-            if (interactAction.WasPressedThisFrame())
+            messageUI?.ShowMessage("Press [E] to ignite the sacred sword.");
+            if (interactAction.WasPerformedThisFrame())
             {
                 ActivateSword();
             }
-        }
-        else if (distance >= interactDistance && !isActivated)
-        {
-            messageUI.HideMessage();
         }
     }
 
     private void ActivateSword()
     {
         isActivated = true;
-        messageUI.HideMessage();
 
-        if (igniteSound != null)
-            igniteSound.Play();
+        if (fireEffect != null) fireEffect.Play();
+        if (swordLight != null) swordLight.enabled = true;
+        if (igniteSound != null) igniteSound.Play();
 
-        fireEffect.Play();
-        swordLight.enabled = true;
+        messageUI?.ShowMessage("The sacred sword has been ignited!");
+        Debug.Log("🔥 The sacred sword has been ignited!");
 
         if (gateController != null)
             gateController.UnlockGate();
-
-        Debug.Log("<color=orange>⚔ The sacred sword has been ignited!</color>");
     }
 
     public bool IsActivated() => isActivated;

@@ -12,51 +12,45 @@ public class SacredGateController : MonoBehaviour
     [Header("Settings")]
     public float interactDistance = 5f;
 
-    private InputAction interactAction;
     private Transform player;
+    private InputAction interactAction;
     private bool isUnlocked = false;
 
-    void Start()
+    private void Start()
     {
+        player = GameObject.FindGameObjectWithTag("Player").transform;
+
         if (playerInput != null)
-        {
-            player = playerInput.transform;
             interactAction = playerInput.actions["Interact"];
-        }
     }
 
-    void Update()
+    private void Update()
     {
-        if (player == null || interactAction == null) return;
+        if (player == null || interactAction == null)
+            return;
 
         float distance = Vector3.Distance(player.position, transform.position);
 
         if (distance < interactDistance)
         {
-            // Eğer kılıç aktif değilse kapı kilitli kalsın
-            if (sacredSword != null && !sacredSword.IsActivated())
+            if (!isUnlocked && sacredSword != null && !sacredSword.IsActivated())
             {
-                messageUI.ShowMessage("The sacred sword must be ignited first!");
+                messageUI?.ShowMessage("The sacred sword must be ignited first!");
                 return;
             }
 
-            // Kılıç aktifse kapı açılabilir
-            messageUI.ShowMessage("Press [E] to open the gate.");
-
-            if (interactAction.WasPressedThisFrame())
+            messageUI?.ShowMessage("Press [E] to open the sacred gate.");
+            if (interactAction.WasPerformedThisFrame() && isUnlocked)
             {
-                doorController.ToggleDoor();
+                doorController?.ToggleDoor();
             }
-        }
-        else
-        {
-            messageUI.HideMessage();
         }
     }
 
     public void UnlockGate()
     {
         isUnlocked = true;
-        Debug.Log("<color=green>✅ Sacred Gate unlocked!</color>");
+        Debug.Log("🔓 Sacred Gate unlocked!");
+        messageUI?.ShowMessage("The sacred gate has been unlocked!");
     }
 }

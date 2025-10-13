@@ -4,41 +4,65 @@ using System.Collections;
 
 public class MessageUI : MonoBehaviour
 {
-    public TMP_Text label;
+    [Header("UI Reference")]
+    public TextMeshProUGUI label;
+    public float fadeDuration = 0.4f;
     public float holdSeconds = 1.6f;
-    private Coroutine co;
 
-    public void ShowOnce(string msg)
+    private Coroutine fadeRoutine;
+
+    private void Awake()
     {
-        if (co != null) StopCoroutine(co);
-        co = StartCoroutine(Run(msg));
+        if (label != null)
+        {
+            Color c = label.color;
+            c.a = 0;
+            label.color = c;
+        }
     }
 
-    private IEnumerator Run(string msg)
+    public void ShowMessage(string text)
     {
-        label.text = msg;
-        label.alpha = 1f;
+        if (fadeRoutine != null)
+            StopCoroutine(fadeRoutine);
+
+        fadeRoutine = StartCoroutine(FadeMessage(text));
+    }
+
+    private IEnumerator FadeMessage(string text)
+    {
+        if (label == null) yield break;
+
+        label.text = text;
+
+        // Fade in
+        for (float t = 0; t < fadeDuration; t += Time.deltaTime)
+        {
+            float alpha = t / fadeDuration;
+            SetAlpha(alpha);
+            yield return null;
+        }
+        SetAlpha(1);
+
         yield return new WaitForSeconds(holdSeconds);
-        label.alpha = 0f;
+
+        // Fade out
+        for (float t = 0; t < fadeDuration; t += Time.deltaTime)
+        {
+            float alpha = 1 - (t / fadeDuration);
+            SetAlpha(alpha);
+            yield return null;
+        }
+        SetAlpha(0);
     }
 
-    // Instant show/hide (for persistent prompts)
-    public void ShowMessage(string msg)
+    private void SetAlpha(float alpha)
     {
-        if (label == null) return;
-        label.text = msg;
-        label.alpha = 1f;
-    }
-
-    public void HideMessage()
-    {
-        if (label == null) return;
-        label.alpha = 0f;
-        label.text = "";
-    }
-
-    public void Hide()
-    {
-        HideMessage();
+        if (label != null)
+        {
+            Color c = label.color;
+            c.a = alpha;
+            label.color = c;
+        }
     }
 }

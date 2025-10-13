@@ -72,7 +72,7 @@ public class DoorController : MonoBehaviour
         }
         else
         {
-            messageUI.HideMessage();
+            //messageUI.HideMessage();
         }
 
         // Rotation smoothing
