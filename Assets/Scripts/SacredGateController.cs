@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 public class SacredGateController : MonoBehaviour
 {
     [Header("References")]
-    public DoorController doorController;
+    public DoorController doorController;         // Aynı objede
     public MessageUI messageUI;
     public SacredSwordController sacredSword;
     public PlayerInput playerInput;
@@ -16,41 +16,50 @@ public class SacredGateController : MonoBehaviour
     private InputAction interactAction;
     private bool isUnlocked = false;
 
+    private void Awake()
+    {
+        // Oyun başında gate kilitli olsun
+        if (doorController != null)
+            doorController.SetLocked(true);
+    }
+
     private void Start()
     {
-        player = GameObject.FindGameObjectWithTag("Player").transform;
-
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
         if (playerInput != null)
             interactAction = playerInput.actions["Interact"];
     }
 
     private void Update()
     {
-        if (player == null || interactAction == null)
-            return;
+        if (player == null || interactAction == null || doorController == null) return;
 
         float distance = Vector3.Distance(player.position, transform.position);
 
         if (distance < interactDistance)
         {
-            if (!isUnlocked && sacredSword != null && !sacredSword.IsActivated())
+            if (!isUnlocked)
             {
                 messageUI?.ShowMessage("The sacred sword must be ignited first!");
-                return;
+                return; // kilitliyken Toggle yok
             }
 
-            messageUI?.ShowMessage("Press [E] to open the sacred gate.");
-            if (interactAction.WasPerformedThisFrame() && isUnlocked)
-            {
-                doorController?.ToggleDoor();
-            }
+            // Unlocked durumda: kapı aç/kapat
+            messageUI?.ShowMessage("Press [E] to open the gate.");
+            if (interactAction.WasPressedThisFrame())
+                doorController.ToggleDoor();
         }
     }
 
     public void UnlockGate()
     {
+        if (isUnlocked) return;
         isUnlocked = true;
-        Debug.Log("🔓 Sacred Gate unlocked!");
+
+        // Kapıyı artık haricen açılabilir hale getir
+        doorController?.SetLocked(false);
+
         messageUI?.ShowMessage("The sacred gate has been unlocked!");
+        Debug.Log("<color=green>✅ Sacred Gate unlocked!</color>");
     }
 }

@@ -20,13 +20,10 @@ public class SacredSwordController : MonoBehaviour
 
     private void Start()
     {
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
-        if (fireEffect != null)
-            fireEffect.Stop();
-
-        if (swordLight != null)
-            swordLight.enabled = false;
+        if (fireEffect != null) fireEffect.Stop();
+        if (swordLight != null) swordLight.enabled = false;
 
         if (playerInput != null)
             interactAction = playerInput.actions["Interact"];
@@ -34,34 +31,33 @@ public class SacredSwordController : MonoBehaviour
 
     private void Update()
     {
-        if (player == null || interactAction == null)
-            return;
+        if (player == null || interactAction == null) return;
+        if (isActivated) return;
 
         float distance = Vector3.Distance(player.position, transform.position);
 
-        if (!isActivated && distance < interactDistance)
+        if (distance < interactDistance)
         {
             messageUI?.ShowMessage("Press [E] to ignite the sacred sword.");
-            if (interactAction.WasPerformedThisFrame())
-            {
+
+            if (interactAction.WasPressedThisFrame())
                 ActivateSword();
-            }
         }
     }
 
     private void ActivateSword()
     {
+        if (isActivated) return;
         isActivated = true;
 
-        if (fireEffect != null) fireEffect.Play();
+        fireEffect?.Play();
         if (swordLight != null) swordLight.enabled = true;
-        if (igniteSound != null) igniteSound.Play();
+        igniteSound?.Play();
 
         messageUI?.ShowMessage("The sacred sword has been ignited!");
-        Debug.Log("🔥 The sacred sword has been ignited!");
+        gateController?.UnlockGate();
 
-        if (gateController != null)
-            gateController.UnlockGate();
+        Debug.Log("🔥 The sacred sword has been ignited!");
     }
 
     public bool IsActivated() => isActivated;
