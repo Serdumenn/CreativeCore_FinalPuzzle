@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 public class SacredGateController : MonoBehaviour
 {
     [Header("References")]
-    public DoorController doorController;         // Aynı objede
+    public DoorController doorController;
     public MessageUI messageUI;
     public SacredSwordController sacredSword;
     public PlayerInput playerInput;
@@ -18,7 +18,6 @@ public class SacredGateController : MonoBehaviour
 
     private void Awake()
     {
-        // Oyun başında gate kilitli olsun
         if (doorController != null)
             doorController.SetLocked(true);
     }
@@ -41,10 +40,9 @@ public class SacredGateController : MonoBehaviour
             if (!isUnlocked)
             {
                 messageUI?.ShowMessage("The sacred sword must be ignited first!");
-                return; // kilitliyken Toggle yok
+                return;
             }
 
-            // Unlocked durumda: kapı aç/kapat
             messageUI?.ShowMessage("Press [E] to open the gate.");
             if (interactAction.WasPressedThisFrame())
                 doorController.ToggleDoor();
@@ -56,7 +54,6 @@ public class SacredGateController : MonoBehaviour
         if (isUnlocked) return;
         isUnlocked = true;
 
-        // Kapıyı artık haricen açılabilir hale getir
         doorController?.SetLocked(false);
 
         messageUI?.ShowMessage("The sacred gate has been unlocked!");

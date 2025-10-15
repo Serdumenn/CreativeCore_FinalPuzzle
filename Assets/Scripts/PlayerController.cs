@@ -40,6 +40,7 @@ public class PlayerController : MonoBehaviour
     {
         if (context.performed && controller.isGrounded)
         {
+            // v = sqrt(2gh)
             verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
     }
@@ -53,14 +54,17 @@ public class PlayerController : MonoBehaviour
     private void HandleMovement()
     {
         Vector3 move = transform.right * moveInput.x + transform.forward * moveInput.y;
+        Vector3 horizontalVelocity = move * moveSpeed;
 
-        if (controller.isGrounded && verticalVelocity < 0)
+        if (controller.isGrounded && verticalVelocity < 0f)
             verticalVelocity = -2f;
 
         verticalVelocity += gravity * Time.deltaTime;
-        move.y = verticalVelocity;
 
-        controller.Move(move * moveSpeed * Time.deltaTime);
+        Vector3 velocity = horizontalVelocity;
+        velocity.y = verticalVelocity;
+
+        controller.Move(velocity * Time.deltaTime);
     }
 
     private void HandleLook()

@@ -19,9 +19,9 @@ public class DoorController : MonoBehaviour
     [Header("Interaction")]
     [Tooltip("If true, this door listens to input itself (Door1 gibi). Gate’te false yapın.")]
     public bool selfInteract = true;
-    public PlayerInput playerInput;          // selfInteract true ise doldurun
+    public PlayerInput playerInput;
     public string interactActionName = "Interact";
-    public MessageUI messageUI;              // selfInteract true ise opsiyonel olarak doldurun
+    public MessageUI messageUI;
 
     [SerializeField] private bool isLocked = false;
 
@@ -54,7 +54,6 @@ public class DoorController : MonoBehaviour
     {
         if (player == null) return;
 
-        // Yalnızca selfInteract kapılarda giriş dinle
         if (selfInteract && !isLocked && interactAction != null)
         {
             float distance = Vector3.Distance(player.position, transform.position);
@@ -78,7 +77,7 @@ public class DoorController : MonoBehaviour
                         Vector3 doorForward = transform.forward;
                         Vector3 playerToDoor = (transform.position - player.position).normalized;
                         float dot = Vector3.Dot(doorForward, playerToDoor);
-                        isOpeningInward = dot < 0; // oyuncu kapının önündeyse dışarı aç
+                        isOpeningInward = dot < 0;
                     }
 
                     if (distance > safeDistance)
@@ -87,7 +86,6 @@ public class DoorController : MonoBehaviour
             }
         }
 
-        // Rotasyonler
         if (isOpen)
         {
             if (isOpeningInward)
@@ -108,7 +106,6 @@ public class DoorController : MonoBehaviour
         }
     }
 
-    // SacredGate tarafından çağrılır
     public void ToggleDoor()
     {
         if (isLocked) return;
@@ -121,7 +118,6 @@ public class DoorController : MonoBehaviour
         if (isLocked) isOpen = false;
     }
 
-    // Gate kontrolü veya başka sistemler için yardımcı
     public bool IsPlayerLookingAtDoor()
     {
         if (player == null) return false;

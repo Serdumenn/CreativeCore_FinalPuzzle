@@ -6,7 +6,7 @@ public class SacredSwordController : MonoBehaviour
     [Header("References")]
     public ParticleSystem fireEffect;
     public Light swordLight;
-    public AudioSource igniteSound;
+    //public AudioSource igniteSound;
     public MessageUI messageUI;
     public SacredGateController gateController;
     public PlayerInput playerInput;
@@ -52,7 +52,7 @@ public class SacredSwordController : MonoBehaviour
 
         fireEffect?.Play();
         if (swordLight != null) swordLight.enabled = true;
-        igniteSound?.Play();
+        //igniteSound?.Play();
 
         messageUI?.ShowMessage("The sacred sword has been ignited!");
         gateController?.UnlockGate();

@@ -4,65 +4,47 @@ using System.Collections;
 
 public class MessageUI : MonoBehaviour
 {
-    [Header("UI Reference")]
-    public TextMeshProUGUI label;
-    public float fadeDuration = 0.4f;
-    public float holdSeconds = 1.6f;
+    [SerializeField] private TextMeshProUGUI messageText;
+    [SerializeField] private float fadeDuration = 1f;
 
-    private Coroutine fadeRoutine;
+    private string currentMessage = "";
+    private Coroutine fadeCoroutine;
 
-    private void Awake()
+    public void ShowMessage(string newMessage, bool forceRestart = false)
     {
-        if (label != null)
+        if (messageText == null)
         {
-            Color c = label.color;
-            c.a = 0;
-            label.color = c;
+            Debug.LogWarning("MessageUI: messageText reference is missing!");
+            return;
         }
+
+        if (!forceRestart && newMessage == currentMessage)
+            return;
+
+        currentMessage = newMessage;
+        messageText.text = newMessage;
+        messageText.alpha = 1f;
+
+        if (fadeCoroutine != null)
+            StopCoroutine(fadeCoroutine);
+
+        fadeCoroutine = StartCoroutine(FadeOutAfterDelay());
     }
 
-    public void ShowMessage(string text)
+    private IEnumerator FadeOutAfterDelay()
     {
-        if (fadeRoutine != null)
-            StopCoroutine(fadeRoutine);
+        yield return new WaitForSeconds(1.0f);
 
-        fadeRoutine = StartCoroutine(FadeMessage(text));
-    }
-
-    private IEnumerator FadeMessage(string text)
-    {
-        if (label == null) yield break;
-
-        label.text = text;
-
-        // Fade in
-        for (float t = 0; t < fadeDuration; t += Time.deltaTime)
+        float elapsed = 0f;
+        while (elapsed < fadeDuration)
         {
-            float alpha = t / fadeDuration;
-            SetAlpha(alpha);
+            elapsed += Time.deltaTime;
+            messageText.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeDuration);
             yield return null;
         }
-        SetAlpha(1);
 
-        yield return new WaitForSeconds(holdSeconds);
-
-        // Fade out
-        for (float t = 0; t < fadeDuration; t += Time.deltaTime)
-        {
-            float alpha = 1 - (t / fadeDuration);
-            SetAlpha(alpha);
-            yield return null;
-        }
-        SetAlpha(0);
-    }
-
-    private void SetAlpha(float alpha)
-    {
-        if (label != null)
-        {
-            Color c = label.color;
-            c.a = alpha;
-            label.color = c;
-        }
+        messageText.text = "";
+        currentMessage = "";
+        fadeCoroutine = null;
     }
 }
