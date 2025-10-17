@@ -6,7 +6,8 @@ public class SacredSwordController : MonoBehaviour
     [Header("References")]
     public ParticleSystem fireEffect;
     public Light swordLight;
-    //public AudioSource igniteSound;
+    public AudioSource igniteSound;
+    public AudioSource hornSound;
     public MessageUI messageUI;
     public SacredGateController gateController;
     public PlayerInput playerInput;
@@ -52,12 +53,21 @@ public class SacredSwordController : MonoBehaviour
 
         fireEffect?.Play();
         if (swordLight != null) swordLight.enabled = true;
-        //igniteSound?.Play();
+
+        if (igniteSound != null && !igniteSound.isPlaying)
+            igniteSound.Play();
+        else
+            Debug.LogWarning("SacredSword: igniteSound is missing in Inspector!");
+
+        if (hornSound != null && !hornSound.isPlaying)
+            hornSound.Play();
+        else
+            Debug.LogWarning("SacredSword: hornSound is missing in Inspector!");
 
         messageUI?.ShowMessage("The sacred sword has been ignited!");
         gateController?.UnlockGate();
 
-        Debug.Log("🔥 The sacred sword has been ignited!");
+        Debug.Log("The sacred sword has been ignited!");
     }
 
     public bool IsActivated() => isActivated;

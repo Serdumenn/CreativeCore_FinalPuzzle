@@ -57,6 +57,6 @@ public class SacredGateController : MonoBehaviour
         doorController?.SetLocked(false);
 
         messageUI?.ShowMessage("The sacred gate has been unlocked!");
-        Debug.Log("<color=green>✅ Sacred Gate unlocked!</color>");
+        Debug.Log("<color=green>Sacred Gate unlocked!</color>");
     }
 }

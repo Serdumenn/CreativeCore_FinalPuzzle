@@ -17,11 +17,13 @@ public class DoorController : MonoBehaviour
     public float safeDistance = 1.5f;
 
     [Header("Interaction")]
-    [Tooltip("If true, this door listens to input itself (Door1 gibi). Gate’te false yapın.")]
     public bool selfInteract = true;
     public PlayerInput playerInput;
     public string interactActionName = "Interact";
     public MessageUI messageUI;
+
+    [Header("Audio")]
+    public AudioSource doorSound;
 
     [SerializeField] private bool isLocked = false;
 
@@ -67,8 +69,7 @@ public class DoorController : MonoBehaviour
 
             if (canInteractWithDoor)
             {
-                if (messageUI != null)
-                    messageUI.ShowMessage("Press [E] to open/close the door");
+                messageUI?.ShowMessage("Press [E] to the door");
 
                 if (interactAction.WasPressedThisFrame())
                 {
@@ -81,7 +82,10 @@ public class DoorController : MonoBehaviour
                     }
 
                     if (distance > safeDistance)
+                    {
                         isOpen = !isOpen;
+                        PlayDoorSound();
+                    }
                 }
             }
         }
@@ -106,10 +110,19 @@ public class DoorController : MonoBehaviour
         }
     }
 
+    private void PlayDoorSound()
+    {
+        if (doorSound != null)
+            doorSound.Play();
+        else
+            Debug.LogWarning($"{name}: Missing doorSound AudioSource reference!");
+    }
+
     public void ToggleDoor()
     {
         if (isLocked) return;
         isOpen = !isOpen;
+        PlayDoorSound();
     }
 
     public void SetLocked(bool locked)
