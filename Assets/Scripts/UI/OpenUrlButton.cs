@@ -5,8 +5,10 @@ using UnityEngine.UI;
 public class OpenUrlButton : MonoBehaviour
 {
     public string url;
-    void Awake() => GetComponent<Button>().onClick.AddListener(() =>
-    {
-        if (!string.IsNullOrWhiteSpace(url)) Application.OpenURL(url);
-    });
+    void Awake() =>
+        GetComponent<Button>().onClick.AddListener(() =>
+        {
+            if (!string.IsNullOrWhiteSpace(url))
+                Application.OpenURL(url);
+        });
 }
