@@ -85,7 +85,7 @@ public class DoorController : MonoBehaviour
 
             if (canInteractWithDoor)
             {
-                messageUI?.ShowMessage("Press [E] to open/close the door.");
+                messageUI?.ShowMessage("Press [E] to the door.");
                 if (!loggedCanInteract)
                 {
                     Debug.Log($"[DoorController] Player can interact with {name} (distance={distance:F2}, angle={angle:F1}).");
@@ -116,7 +116,6 @@ public class DoorController : MonoBehaviour
             }
         }
 
-        // animasyon
         if (isOpen)
         {
             if (isOpeningInward)

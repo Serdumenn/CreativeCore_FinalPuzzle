@@ -6,8 +6,8 @@ public class SacredSwordController : MonoBehaviour
     [Header("References")]
     public ParticleSystem fireEffect;
     public Light swordLight;
-    public AudioSource igniteSound;   // tek seferlik ateş SFX
-    public AudioSource hornSound;     // arka plan/ambiyans (opsiyonel)
+    public AudioSource igniteSound;
+    public AudioSource hornSound;
     public MessageUI messageUI;
     public SacredGateController gateController;
     public PlayerInput playerInput;
@@ -58,7 +58,7 @@ public class SacredSwordController : MonoBehaviour
         messageUI?.ShowMessage("The sacred sword has been ignited!", true);
         gateController?.UnlockGate();
 
-        Debug.Log("🔥 Sacred sword ignited.");
+        Debug.Log("Sacred sword ignited.");
     }
 
     public bool IsActivated() => isActivated;

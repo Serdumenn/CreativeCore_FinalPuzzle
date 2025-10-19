@@ -2,39 +2,29 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-
-/// <summary>
-/// Ana menü davranışı:
-/// - Play: FadeOut → MainScene yükle
-/// - Credits: CanvasGroup ile fade in/out
-/// - Sound: AudioListener.pause toggle
-/// </summary>
 public class MenuController : MonoBehaviour
 {
     [Header("Scene")]
-    [Tooltip("Play'e basınca yüklenecek sahnenin adı (Build Settings'e ekli olmalı).")]
     public string mainSceneName = "MainScene";
 
     [Header("References")]
-    [SerializeField] private ScreenFader screenFader;   // MainMenuUI > FadePanel üzerinde
-    [SerializeField] private CanvasGroup creditsPanel;  // CreditsPanel (CanvasGroup zorunlu)
+    [SerializeField] private ScreenFader screenFader;
+    [SerializeField] private CanvasGroup creditsPanel;
     [SerializeField] private Button playButton;
     [SerializeField] private Button creditsButton;
-    [SerializeField] private Button closeButton;        // Credits içindeki Back/Close
-    [SerializeField] private Button soundButton;        // Opsiyonel
+    [SerializeField] private Button closeButton;
+    [SerializeField] private Button soundButton;
 
     [Header("Timings")]
     [Min(0.05f)] public float fadeDuration = 0.6f;
     [Min(0.05f)] public float creditsFade  = 0.35f;
 
-    // state
     private bool creditsVisible = false;
     private bool isTransitioning = false;
     private Coroutine creditsRoutine;
 
     private void Reset()
     {
-        // KOLAY BAĞLANTI: İsimden bulmayı dener
         if (creditsPanel == null)
         {
             var go = GameObject.Find("CreditsPanel");
@@ -52,10 +42,8 @@ public class MenuController : MonoBehaviour
         CacheReferences();
         ValidateConfiguration();
 
-        // Credits paneli görünmez başlat
         SetCreditsState(visible: false, instant: true);
 
-        // Butonları güvenle bağla (önce varsa eski dinleyiciyi kaldır)
         if (playButton)
         {
             playButton.onClick.RemoveListener(PlayGame);
@@ -78,7 +66,6 @@ public class MenuController : MonoBehaviour
         }
     }
 
-    // -------- Public API (Inspector’dan seçilebilsin) --------
     public void PlayGame()
     {
         if (!isActiveAndEnabled || isTransitioning) return;
@@ -108,7 +95,6 @@ public class MenuController : MonoBehaviour
         AudioListener.pause = !AudioListener.pause;
     }
 
-    // ---------------- Coroutines ----------------
 
     private IEnumerator PlayRoutine()
     {
@@ -135,7 +121,6 @@ public class MenuController : MonoBehaviour
         float end   = show ? 1f : 0f;
         float t     = 0f;
 
-        // geçişte arka planı kilitle
         creditsPanel.interactable   = false;
         creditsPanel.blocksRaycasts = true;
 
@@ -153,7 +138,6 @@ public class MenuController : MonoBehaviour
         creditsRoutine = null;
     }
 
-    // ---------------- Helpers ----------------
 
     private void SetCreditsState(bool visible, bool instant)
     {

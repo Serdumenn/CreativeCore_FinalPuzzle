@@ -8401,11 +8401,11 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1375112493}
+    m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 107972, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
       propertyPath: m_Name
-      value: Character_Knight_02_Orange
+      value: Knight
       objectReference: {fileID: 0}
     - target: {fileID: 163686, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
       propertyPath: m_IsActive
@@ -8425,15 +8425,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400990, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 16
+      value: 17.92
       objectReference: {fileID: 0}
     - target: {fileID: 400990, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.029
+      value: 0.097999334
       objectReference: {fileID: 0}
     - target: {fileID: 400990, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 23.200336
+      value: 14.980337
       objectReference: {fileID: 0}
     - target: {fileID: 400990, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
       propertyPath: m_LocalRotation.w
@@ -8472,7 +8472,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 101824, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
+    - {fileID: 161022, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
+    - {fileID: 153478, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
+    - {fileID: 163686, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 107972, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
@@ -8482,11 +8486,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 981872847}
   m_SourcePrefab: {fileID: 100100000, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
---- !u!4 &981872845 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 400990, guid: 2f4930b22c943444e856b508d62919b2, type: 3}
-  m_PrefabInstance: {fileID: 981872844}
-  m_PrefabAsset: {fileID: 0}
 --- !u!65 &981872846
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -8520,12 +8519,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6365ee7801ca490499cfc10de19ee6d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gateController: {fileID: 0}
+  gateController: {fileID: 6921062541399137943}
   messageUI: {fileID: 1109775360}
   playerInput: {fileID: 20417056}
-  interactDistance: 2.5
+  interactDistance: 5
   lockedMessage: The gate remains sealed...
   readyMessage: Press [E] to speak with the knight.
+  endDelaySeconds: 4
+  farewellMessage: The knight acknowledges your deeds...
 --- !u!4 &1001244676 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5945734381718280981, guid: e2640158a51d3f140b9a300b124fee3c, type: 3}
@@ -9339,7 +9340,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColor: {r: 1, g: 0.8039216, b: 0.30588236, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -9364,7 +9365,7 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 1
   m_HorizontalAlignment: 2
-  m_VerticalAlignment: 256
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -9440,8 +9441,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   messageText: {fileID: 1109775357}
+  fadeInTime: 0.18
   holdTime: 1.2
-  fadeTime: 0.35
+  fadeOutTime: 0.22
 --- !u!4 &1110150698 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1288218074956039538, guid: d615b5d940a26d14d92cce654f8fb90a, type: 3}
@@ -10344,7 +10346,6 @@ Transform:
   - {fileID: 1320250654}
   - {fileID: 31929647}
   - {fileID: 1823970919}
-  - {fileID: 981872845}
   m_Father: {fileID: 12489985}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1408553463 stripped
@@ -10469,12 +10470,20 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 490189605}
     - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
+      propertyPath: viewAngle
+      value: 55
+      objectReference: {fileID: 0}
+    - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
       propertyPath: playerInput
       value: 
       objectReference: {fileID: 20417056}
     - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
+      propertyPath: safeDistance
+      value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
       propertyPath: interactDistance
-      value: 3.5
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 7209370095284739137, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
       propertyPath: m_Name
@@ -11274,8 +11283,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   messageText: {fileID: 1109775357}
-  holdTime: 1.2
-  fadeTime: 0.35
+  fadeInTime: 0.18
+  holdTime: 1.6
+  fadeOutTime: 0.22
 --- !u!114 &1626154160
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11293,9 +11303,9 @@ MonoBehaviour:
   igniteSound: {fileID: 1626154162}
   hornSound: {fileID: 1745472061}
   messageUI: {fileID: 1109775360}
-  gateController: {fileID: 0}
+  gateController: {fileID: 6921062541399137943}
   playerInput: {fileID: 20417056}
-  interactDistance: 4
+  interactDistance: 6
 --- !u!65 &1626154161
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -13004,13 +13014,29 @@ PrefabInstance:
     m_TransformParent: {fileID: 1518995709}
     m_Modifications:
     - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
+      propertyPath: isLocked
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
       propertyPath: messageUI
       value: 
       objectReference: {fileID: 1109775360}
     - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
+      propertyPath: viewAngle
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
       propertyPath: playerInput
       value: 
       objectReference: {fileID: 20417056}
+    - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
+      propertyPath: safeDistance
+      value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
+      propertyPath: interactDistance
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 7209370095284739137, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
       propertyPath: m_Name
       value: SacredGate
@@ -13080,17 +13106,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8018381282305443579, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
   m_PrefabInstance: {fileID: 6921062541399137937}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &6921062541399137941 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
-  m_PrefabInstance: {fileID: 6921062541399137937}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1493210503}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fbf102dedc438f24ca6a91adfb840391, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!82 &6921062541399137942 stripped
 AudioSource:
   m_CorrespondingSourceObject: {fileID: 5123313839011282468, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
@@ -13108,12 +13123,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 845bb0c02b3e7d74d9cddc8b28452f1f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  doorController: {fileID: 6921062541399137941}
+  doorController: {fileID: 6921062541399137944}
   messageUI: {fileID: 1109775360}
   sacredSword: {fileID: 1626154160}
   playerInput: {fileID: 20417056}
   interactDistance: 5
   isUnlocked: 0
+--- !u!114 &6921062541399137944 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
+  m_PrefabInstance: {fileID: 6921062541399137937}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1493210503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbf102dedc438f24ca6a91adfb840391, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -13122,6 +13148,7 @@ SceneRoots:
   - {fileID: 12489985}
   - {fileID: 1534458489}
   - {fileID: 1745472062}
+  - {fileID: 981872844}
   - {fileID: 1558903593}
   - {fileID: 1518995709}
   - {fileID: 1448653097}

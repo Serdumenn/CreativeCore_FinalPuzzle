@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -6,14 +5,18 @@ using UnityEngine.SceneManagement;
 public class FinalKnightController : MonoBehaviour
 {
     [Header("References")]
-    public SacredGateController gateController;   // Doors/SacredGate
-    public MessageUI messageUI;                   // UI_Canvas/UI_MessageText
-    public PlayerInput playerInput;               // Player (PlayerInput)
+    public SacredGateController gateController;
+    public MessageUI messageUI;
+    public PlayerInput playerInput;
 
     [Header("Settings")]
-    [Min(0.5f)] public float interactDistance = 2.5f;
+    [Min(0.5f)] public float interactDistance = 4.5f;
     public string lockedMessage = "The gate remains sealed...";
     public string readyMessage  = "Press [E] to speak with the knight.";
+
+    [Header("Ending")]
+    [Min(0f)] public float endDelaySeconds = 4f;
+    [TextArea] public string farewellMessage = "The knight acknowledges your deeds...";
 
     private Transform player;
     private InputAction interactAction;
@@ -24,6 +27,9 @@ public class FinalKnightController : MonoBehaviour
     {
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
         playerController = player ? player.GetComponent<PlayerController>() : null;
+
+        if (gateController == null)
+            gateController = FindFirstObjectByType<SacredGateController>();
 
         if (playerInput == null && player)
             playerInput = player.GetComponent<PlayerInput>();
@@ -38,7 +44,7 @@ public class FinalKnightController : MonoBehaviour
     private void Update()
     {
         if (isEnding) return;
-        if (player == null || gateController == null || interactAction == null) return;
+        if (player == null || gateController == null) return;
 
         float d = Vector3.Distance(player.position, transform.position);
         if (d > interactDistance) return;
@@ -50,26 +56,32 @@ public class FinalKnightController : MonoBehaviour
         }
 
         messageUI?.ShowMessage(readyMessage);
-        if (interactAction.WasPressedThisFrame())
+
+        if (interactAction != null && interactAction.WasPressedThisFrame())
             StartCoroutine(FinishAndLoadMenu());
     }
 
-    private IEnumerator FinishAndLoadMenu()
+    private System.Collections.IEnumerator FinishAndLoadMenu()
     {
         if (isEnding) yield break;
         isEnding = true;
 
-        messageUI?.ShowMessage("The knight will guide you home...", true);
-
-        // kontrolü kapat
-        if (playerInput != null) playerInput.DeactivateInput();
-        if (playerController != null) playerController.enabled = false;
-
-        // fade YOK — doğrudan menü
+        if (playerController) playerController.enabled = false;
+        if (playerInput) playerInput.DeactivateInput();
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible   = true;
 
+        messageUI?.ShowMessage(farewellMessage, force: true);
+        yield return new WaitForSecondsRealtime(endDelaySeconds);
+
         SceneManager.LoadScene("MenuScene");
-        yield break;
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, interactDistance);
+    }
+#endif
 }

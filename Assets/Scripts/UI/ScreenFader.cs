@@ -1,12 +1,6 @@
 using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// Ekranın üzerine binen siyah paneli CanvasGroup alfa ile animler.
-/// Aynı GameObject'te bir CanvasGroup bekler.
-/// FadeOut : 0 → 1 (karart)   — sahne geçişinden önce
-/// FadeIn  : 1 → 0 (aç)       — menü/sahne açılışında
-/// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public class ScreenFader : MonoBehaviour
 {
@@ -18,26 +12,23 @@ public class ScreenFader : MonoBehaviour
     private CanvasGroup cg;
     private Coroutine running;
 
-    /// Şu anda bir fade korutini çalışıyor mu?
-    public bool IsFading => running != null;
-
-    /// Panel görünür mü (alfa > 0)?
+    public bool IsFading  => running != null;
     public bool IsVisible => cg != null && cg.alpha > 0.001f;
-
-    private void Reset()
-    {
-        CacheCanvasGroup();
-        ApplyInitialState();
-    }
 
     private void Awake()
     {
         CacheCanvasGroup();
-        ApplyInitialState();
     }
 
     private void Start()
     {
+        CacheCanvasGroup();
+        if (cg == null) return;
+
+        cg.interactable   = false;
+        cg.alpha          = fadeOnStart ? 1f : 0f;
+        cg.blocksRaycasts = fadeOnStart;
+
         if (fadeOnStart)
             StartCoroutine(FadeIn(startDuration > 0f ? startDuration : defaultDuration));
     }
@@ -49,7 +40,7 @@ public class ScreenFader : MonoBehaviour
 
         float d = (duration > 0f) ? duration : defaultDuration;
         if (running != null) StopCoroutine(running);
-        running = StartCoroutine(FadeRoutine(targetAlpha: 1f, d));
+        running = StartCoroutine(FadeRoutine(1f, d));
         yield return running;
     }
 
@@ -60,17 +51,15 @@ public class ScreenFader : MonoBehaviour
 
         float d = (duration > 0f) ? duration : defaultDuration;
         if (running != null) StopCoroutine(running);
-        running = StartCoroutine(FadeRoutine(targetAlpha: 0f, d));
+        running = StartCoroutine(FadeRoutine(0f, d));
         yield return running;
     }
 
     private IEnumerator FadeRoutine(float targetAlpha, float duration)
     {
         float start = cg.alpha;
-
-        // Fade süresince UI tıklamalarını engelle.
         cg.blocksRaycasts = true;
-        cg.interactable  = false;
+        cg.interactable   = false;
 
         if (duration <= Mathf.Epsilon)
         {
@@ -83,13 +72,11 @@ public class ScreenFader : MonoBehaviour
         float t = 0f;
         while (t < duration)
         {
-            t += Time.unscaledDeltaTime; // menüde timeScale etkilenmesin
+            t += Time.unscaledDeltaTime;
             cg.alpha = Mathf.Lerp(start, targetAlpha, Mathf.Clamp01(t / duration));
             yield return null;
         }
         cg.alpha = targetAlpha;
-
-        // Tamamen açıldığında raycast engelini kaldır (yalnızca görünürken blocksRaycasts açık kalsın).
         cg.blocksRaycasts = targetAlpha > 0f;
         running = null;
     }
@@ -99,20 +86,10 @@ public class ScreenFader : MonoBehaviour
         if (cg == null) cg = GetComponent<CanvasGroup>();
     }
 
-    private void ApplyInitialState()
-    {
-        if (cg == null) return;
-        cg.interactable   = false;
-        cg.alpha          = fadeOnStart ? 1f : 0f;
-        cg.blocksRaycasts = fadeOnStart; // startta siyahsa tıklamayı blokla
-    }
-
 #if UNITY_EDITOR
     private void OnValidate()
     {
         CacheCanvasGroup();
-        if (!Application.isPlaying)
-            ApplyInitialState();
     }
 #endif
 }
