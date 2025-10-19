@@ -6,8 +6,8 @@ public class SacredSwordController : MonoBehaviour
     [Header("References")]
     public ParticleSystem fireEffect;
     public Light swordLight;
-    public AudioSource igniteSound;
-    public AudioSource hornSound;
+    public AudioSource igniteSound;   // tek seferlik ateş SFX
+    public AudioSource hornSound;     // arka plan/ambiyans (opsiyonel)
     public MessageUI messageUI;
     public SacredGateController gateController;
     public PlayerInput playerInput;
@@ -27,7 +27,7 @@ public class SacredSwordController : MonoBehaviour
         if (swordLight != null) swordLight.enabled = false;
 
         if (playerInput != null)
-            interactAction = playerInput.actions["Interact"];
+            interactAction = playerInput.actions?.FindAction("Interact", false);
     }
 
     private void Update()
@@ -36,11 +36,9 @@ public class SacredSwordController : MonoBehaviour
         if (isActivated) return;
 
         float distance = Vector3.Distance(player.position, transform.position);
-
         if (distance < interactDistance)
         {
             messageUI?.ShowMessage("Press [E] to ignite the sacred sword.");
-
             if (interactAction.WasPressedThisFrame())
                 ActivateSword();
         }
@@ -54,20 +52,13 @@ public class SacredSwordController : MonoBehaviour
         fireEffect?.Play();
         if (swordLight != null) swordLight.enabled = true;
 
-        if (igniteSound != null && !igniteSound.isPlaying)
-            igniteSound.Play();
-        else
-            Debug.LogWarning("SacredSword: igniteSound is missing in Inspector!");
+        if (igniteSound != null && !igniteSound.isPlaying) igniteSound.Play();
+        if (hornSound   != null && !hornSound.isPlaying)   hornSound.Play();
 
-        if (hornSound != null && !hornSound.isPlaying)
-            hornSound.Play();
-        else
-            Debug.LogWarning("SacredSword: hornSound is missing in Inspector!");
-
-        messageUI?.ShowMessage("The sacred sword has been ignited!");
+        messageUI?.ShowMessage("The sacred sword has been ignited!", true);
         gateController?.UnlockGate();
 
-        Debug.Log("The sacred sword has been ignited!");
+        Debug.Log("🔥 Sacred sword ignited.");
     }
 
     public bool IsActivated() => isActivated;

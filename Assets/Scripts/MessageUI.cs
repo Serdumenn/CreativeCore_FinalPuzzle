@@ -1,50 +1,56 @@
+using System.Collections;
 using UnityEngine;
 using TMPro;
-using System.Collections;
 
 public class MessageUI : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI messageText;
-    [SerializeField] private float fadeDuration = 1f;
+    public TMP_Text messageText;
+    [Min(0.1f)] public float holdTime = 1.2f;
+    [Min(0.05f)] public float fadeTime = 0.35f;
 
-    private string currentMessage = "";
-    private Coroutine fadeCoroutine;
+    private Coroutine fadeCo;
+    private string current;
+
+    private void Awake()
+    {
+        if (messageText != null)
+            messageText.alpha = 0f;
+    }
 
     public void ShowMessage(string newMessage, bool forceRestart = false)
     {
-        if (messageText == null)
-        {
-            Debug.LogWarning("MessageUI: messageText reference is missing!");
-            return;
-        }
+        if (messageText == null || string.IsNullOrEmpty(newMessage)) return;
 
-        if (!forceRestart && newMessage == currentMessage)
+        // Aynı mesajı her frame tekrar başlatma
+        if (!forceRestart && newMessage == current && messageText.alpha > 0.9f)
             return;
 
-        currentMessage = newMessage;
-        messageText.text = newMessage;
-        messageText.alpha = 1f;
+        current = newMessage;
 
-        if (fadeCoroutine != null)
-            StopCoroutine(fadeCoroutine);
-
-        fadeCoroutine = StartCoroutine(FadeOutAfterDelay());
+        if (fadeCo != null) StopCoroutine(fadeCo);
+        fadeCo = StartCoroutine(Co_ShowThenFade(newMessage));
     }
 
-    private IEnumerator FadeOutAfterDelay()
+    private IEnumerator Co_ShowThenFade(string msg)
     {
-        yield return new WaitForSeconds(1.0f);
+        messageText.text = msg;
 
-        float elapsed = 0f;
-        while (elapsed < fadeDuration)
+        // anında görünür
+        messageText.alpha = 1f;
+
+        // kısa tut
+        yield return new WaitForSecondsRealtime(holdTime);
+
+        float t = 0f;
+        float start = messageText.alpha;
+        while (t < fadeTime)
         {
-            elapsed += Time.deltaTime;
-            messageText.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeDuration);
+            t += Time.unscaledDeltaTime;
+            messageText.alpha = Mathf.Lerp(start, 0f, t / fadeTime);
             yield return null;
         }
 
-        messageText.text = "";
-        currentMessage = "";
-        fadeCoroutine = null;
+        messageText.alpha = 0f;
+        fadeCo = null;
     }
 }

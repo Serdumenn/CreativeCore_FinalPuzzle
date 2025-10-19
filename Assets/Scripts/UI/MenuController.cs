@@ -4,35 +4,37 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Menü butonlarını ve krediler panelini yönetir.
-/// Play: FadeOut → MainScene yükle
-/// Credits: paneli CanvasGroup ile fade in/out
-/// Sound: AudioListener.pause toggle (şimdilik basit)
+/// Ana menü davranışı:
+/// - Play: FadeOut → MainScene yükle
+/// - Credits: CanvasGroup ile fade in/out
+/// - Sound: AudioListener.pause toggle
 /// </summary>
 public class MenuController : MonoBehaviour
 {
     [Header("Scene")]
-    [Tooltip("Play'e basınca yüklenecek sahne adı")]
+    [Tooltip("Play'e basınca yüklenecek sahnenin adı (Build Settings'e ekli olmalı).")]
     public string mainSceneName = "MainScene";
 
     [Header("References")]
-    public ScreenFader screenFader;          // MainMenuUI > FadePanel üzerinde olmalı
-    public CanvasGroup creditsPanel;         // CreditsPanel (CanvasGroup zorunlu)
-    public Button playButton;
-    public Button creditsButton;
-    public Button closeButton;               // Credits içindeki Back
-    public Button soundButton;               // İsteğe bağlı
+    [SerializeField] private ScreenFader screenFader;   // MainMenuUI > FadePanel üzerinde
+    [SerializeField] private CanvasGroup creditsPanel;  // CreditsPanel (CanvasGroup zorunlu)
+    [SerializeField] private Button playButton;
+    [SerializeField] private Button creditsButton;
+    [SerializeField] private Button closeButton;        // Credits içindeki Back/Close
+    [SerializeField] private Button soundButton;        // Opsiyonel
 
     [Header("Timings")]
     [Min(0.05f)] public float fadeDuration = 0.6f;
-    [Min(0.05f)] public float creditsFade = 0.35f;
+    [Min(0.05f)] public float creditsFade  = 0.35f;
 
-    // iç durum
-    bool creditsVisible = false;
+    // state
+    private bool creditsVisible = false;
+    private bool isTransitioning = false;
+    private Coroutine creditsRoutine;
 
     private void Reset()
     {
-        // Inspector’da eklerken küçük kalite-of-life: CreditsPanel’de CanvasGroup olsun
+        // KOLAY BAĞLANTI: İsimden bulmayı dener
         if (creditsPanel == null)
         {
             var go = GameObject.Find("CreditsPanel");
@@ -47,94 +49,95 @@ public class MenuController : MonoBehaviour
 
     private void Awake()
     {
-        // Credits paneli görünmez başlasın
-        if (creditsPanel != null)
-        {
-            creditsPanel.alpha = 0f;
-            creditsPanel.interactable = false;
-            creditsPanel.blocksRaycasts = false;
-        }
+        CacheReferences();
+        ValidateConfiguration();
 
-        // Butonları otomatik bağla (Inspector’da bağlıysa yine de üstüne yazmaz)
-        if (playButton != null)
+        // Credits paneli görünmez başlat
+        SetCreditsState(visible: false, instant: true);
+
+        // Butonları güvenle bağla (önce varsa eski dinleyiciyi kaldır)
+        if (playButton)
         {
             playButton.onClick.RemoveListener(PlayGame);
             playButton.onClick.AddListener(PlayGame);
         }
-        if (creditsButton != null)
+        if (creditsButton)
         {
             creditsButton.onClick.RemoveListener(ToggleCredits);
             creditsButton.onClick.AddListener(ToggleCredits);
         }
-        if (closeButton != null)
+        if (closeButton)
         {
             closeButton.onClick.RemoveListener(HideCredits);
             closeButton.onClick.AddListener(HideCredits);
         }
-        if (soundButton != null)
+        if (soundButton)
         {
             soundButton.onClick.RemoveListener(ToggleSound);
             soundButton.onClick.AddListener(ToggleSound);
         }
     }
 
-    // ============== Public API (Inspector OnClick’te görünsün diye) ==============
-
+    // -------- Public API (Inspector’dan seçilebilsin) --------
     public void PlayGame()
     {
-        // Çift tıklama vs. için tekrar tetiklenmesin
-        if (!gameObject.activeInHierarchy) return;
+        if (!isActiveAndEnabled || isTransitioning) return;
         StartCoroutine(PlayRoutine());
     }
 
     public void ToggleCredits()
     {
-        if (creditsVisible) HideCredits();
-        else ShowCredits();
+        if (!isActiveAndEnabled) return;
+        StartCreditsRoutine(show: !creditsVisible);
     }
 
     public void ShowCredits()
     {
-        if (!gameObject.activeInHierarchy) return;
-        StartCoroutine(CreditsRoutine(show: true));
+        if (!isActiveAndEnabled) return;
+        StartCreditsRoutine(show: true);
     }
 
     public void HideCredits()
     {
-        if (!gameObject.activeInHierarchy) return;
-        StartCoroutine(CreditsRoutine(show: false));
+        if (!isActiveAndEnabled) return;
+        StartCreditsRoutine(show: false);
     }
 
     public void ToggleSound()
     {
         AudioListener.pause = !AudioListener.pause;
-        // İleride buton ikonunu güncellemek istersen burada yapabilirsin.
     }
 
-    // ========================== Coroutines ==========================
+    // ---------------- Coroutines ----------------
 
     private IEnumerator PlayRoutine()
     {
-        // Menüden oyuna geçerken ekrana siyah bindir
-        if (screenFader != null)
+        isTransitioning = true;
+        SetMenuInteractable(false);
+
+        if (screenFader)
             yield return screenFader.FadeOut(fadeDuration);
 
-        // Sahneyi yükle
         SceneManager.LoadScene(mainSceneName);
+    }
+
+    private void StartCreditsRoutine(bool show)
+    {
+        if (creditsRoutine != null) StopCoroutine(creditsRoutine);
+        creditsRoutine = StartCoroutine(CreditsRoutine(show));
     }
 
     private IEnumerator CreditsRoutine(bool show)
     {
-        if (creditsPanel == null)
-            yield break;
+        if (!creditsPanel) yield break;
 
         float start = creditsPanel.alpha;
-        float end = show ? 1f : 0f;
-        float t = 0f;
+        float end   = show ? 1f : 0f;
+        float t     = 0f;
 
-        // Etkileşim kilidi
-        creditsPanel.interactable = false;
-        creditsPanel.blocksRaycasts = true;  // arka planı kilitle
+        // geçişte arka planı kilitle
+        creditsPanel.interactable   = false;
+        creditsPanel.blocksRaycasts = true;
 
         while (t < creditsFade)
         {
@@ -145,7 +148,89 @@ public class MenuController : MonoBehaviour
         creditsPanel.alpha = end;
 
         creditsVisible = show;
-        creditsPanel.interactable = show;
+        creditsPanel.interactable   = show;
         creditsPanel.blocksRaycasts = show;
+        creditsRoutine = null;
     }
+
+    // ---------------- Helpers ----------------
+
+    private void SetCreditsState(bool visible, bool instant)
+    {
+        creditsVisible = visible;
+        if (!creditsPanel) return;
+
+        creditsPanel.alpha         = visible ? 1f : 0f;
+        creditsPanel.interactable  = visible;
+        creditsPanel.blocksRaycasts= visible;
+
+        if (!instant)
+            StartCreditsRoutine(visible);
+    }
+
+    private void SetMenuInteractable(bool value)
+    {
+        if (playButton)    playButton.interactable    = value;
+        if (creditsButton) creditsButton.interactable = value;
+        if (closeButton)   closeButton.interactable   = value;
+        if (soundButton)   soundButton.interactable   = value;
+    }
+
+    private void CacheReferences()
+    {
+        if (!screenFader)
+            screenFader = GetComponentInChildren<ScreenFader>(includeInactive: true);
+
+        if (!creditsPanel)
+        {
+            foreach (var g in GetComponentsInChildren<CanvasGroup>(includeInactive: true))
+            {
+                if (g.gameObject.name.ToLower().Contains("credit"))
+                {
+                    creditsPanel = g;
+                    break;
+                }
+            }
+        }
+
+        if (!playButton || !creditsButton || !closeButton || !soundButton)
+        {
+            foreach (var b in GetComponentsInChildren<Button>(includeInactive: true))
+            {
+                var n = b.name.ToLower();
+                if (!playButton    && n.Contains("play"))                    playButton = b;
+                else if (!creditsButton && n.Contains("credits") && !n.Contains("close")) creditsButton = b;
+                else if (!closeButton   && (n.Contains("close") || n.Contains("back")))   closeButton = b;
+                else if (!soundButton   && n.Contains("sound"))              soundButton = b;
+            }
+        }
+    }
+
+    private void ValidateConfiguration()
+    {
+        if (string.IsNullOrEmpty(mainSceneName))
+            Debug.LogWarning("[MenuController] Main scene name is empty.", this);
+
+        if (!screenFader)
+            Debug.LogWarning("[MenuController] ScreenFader reference is missing.", this);
+        else if (!screenFader.TryGetComponent(out CanvasGroup _))
+            Debug.LogError("[MenuController] ScreenFader requires a CanvasGroup.", screenFader);
+
+        if (!creditsPanel)
+            Debug.LogWarning("[MenuController] Credits CanvasGroup is missing.", this);
+
+        if (!playButton || !creditsButton || !closeButton)
+            Debug.LogWarning("[MenuController] One or more buttons are not assigned.", this);
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        CacheReferences();
+        ValidateConfiguration();
+
+        if (!Application.isPlaying && creditsPanel)
+            SetCreditsState(visible: creditsVisible, instant: true);
+    }
+#endif
 }
