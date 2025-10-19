@@ -3,11 +3,11 @@ using UnityEngine.InputSystem;
 
 public class DoorController : MonoBehaviour
 {
-    [Header("Door Parts")]
+    [Header("Door Transforms")]
     public Transform leftDoor;
     public Transform rightDoor;
 
-    [Header("Motion Settings")]
+    [Header("Open Settings")]
     public float openAngle = 90f;
     public float openSpeed = 2f;
 
@@ -30,31 +30,47 @@ public class DoorController : MonoBehaviour
     private bool isOpen = false;
     private bool isOpeningInward = true;
     private Transform player;
+
     private Quaternion leftClosedRot, rightClosedRot;
     private Quaternion leftOpenInwardRot, rightOpenInwardRot;
     private Quaternion leftOpenOutwardRot, rightOpenOutwardRot;
+
     private InputAction interactAction;
+    private bool loggedCanInteract;
+    private bool hasLoggedMissingAction;
 
     void Start()
     {
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
-        if (selfInteract && playerInput != null)
-            interactAction = playerInput.actions[interactActionName];
+        if (selfInteract)
+        {
+            if (playerInput == null)
+                playerInput = FindFirstObjectByType<PlayerInput>();
+            interactAction = playerInput != null
+                ? playerInput.actions?.FindAction(interactActionName, false)
+                : null;
+        }
 
-        leftClosedRot = leftDoor.localRotation;
+        leftClosedRot  = leftDoor.localRotation;
         rightClosedRot = rightDoor.localRotation;
 
-        leftOpenInwardRot = leftClosedRot * Quaternion.Euler(0, -openAngle, 0);
-        rightOpenInwardRot = rightClosedRot * Quaternion.Euler(0,  openAngle, 0);
+        leftOpenInwardRot  = leftClosedRot  * Quaternion.Euler(0f, -openAngle, 0f);
+        rightOpenInwardRot = rightClosedRot * Quaternion.Euler(0f,  openAngle, 0f);
 
-        leftOpenOutwardRot = leftClosedRot * Quaternion.Euler(0,  openAngle, 0);
-        rightOpenOutwardRot = rightClosedRot * Quaternion.Euler(0, -openAngle, 0);
+        leftOpenOutwardRot  = leftClosedRot  * Quaternion.Euler(0f,  openAngle, 0f);
+        rightOpenOutwardRot = rightClosedRot * Quaternion.Euler(0f, -openAngle, 0f);
     }
 
     void Update()
     {
         if (player == null) return;
+
+        if (selfInteract && interactAction == null && !hasLoggedMissingAction)
+        {
+            Debug.LogWarning($"{name}: Interact action '{interactActionName}' not found on PlayerInput.");
+            hasLoggedMissingAction = true;
+        }
 
         if (selfInteract && !isLocked && interactAction != null)
         {
@@ -69,27 +85,38 @@ public class DoorController : MonoBehaviour
 
             if (canInteractWithDoor)
             {
-                messageUI?.ShowMessage("Press [E] to the door");
+                messageUI?.ShowMessage("Press [E] to open/close the door.");
+                if (!loggedCanInteract)
+                {
+                    Debug.Log($"[DoorController] Player can interact with {name} (distance={distance:F2}, angle={angle:F1}).");
+                    loggedCanInteract = true;
+                }
 
                 if (interactAction.WasPressedThisFrame())
                 {
                     if (!isOpen)
                     {
-                        Vector3 doorForward = transform.forward;
+                        Vector3 doorForward  = transform.forward;
                         Vector3 playerToDoor = (transform.position - player.position).normalized;
                         float dot = Vector3.Dot(doorForward, playerToDoor);
-                        isOpeningInward = dot < 0;
+                        isOpeningInward = (dot < 0f);
                     }
 
                     if (distance > safeDistance)
                     {
                         isOpen = !isOpen;
                         PlayDoorSound();
+                        Debug.Log($"[DoorController] {name} toggled state. Now open={isOpen}.");
                     }
                 }
             }
+            else
+            {
+                loggedCanInteract = false;
+            }
         }
 
+        // animasyon
         if (isOpen)
         {
             if (isOpeningInward)
@@ -112,10 +139,8 @@ public class DoorController : MonoBehaviour
 
     private void PlayDoorSound()
     {
-        if (doorSound != null)
-            doorSound.Play();
-        else
-            Debug.LogWarning($"{name}: Missing doorSound AudioSource reference!");
+        if (doorSound != null) doorSound.Play();
+        else Debug.LogWarning($"{name}: Missing doorSound AudioSource reference!");
     }
 
     public void ToggleDoor()
@@ -129,16 +154,15 @@ public class DoorController : MonoBehaviour
     {
         isLocked = locked;
         if (isLocked) isOpen = false;
+        Debug.Log($"[DoorController] {name} lock state updated: locked={isLocked}.");
     }
 
     public bool IsPlayerLookingAtDoor()
     {
         if (player == null) return false;
-
         Vector3 directionToDoor = (transform.position - player.position).normalized;
         float angle = Vector3.Angle(player.forward, directionToDoor);
         float distance = Vector3.Distance(player.position, transform.position);
-
         return angle < viewAngle && distance < interactDistance;
     }
 }

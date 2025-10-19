@@ -6,7 +6,7 @@ public class SacredGateController : MonoBehaviour
     [Header("References")]
     public DoorController doorController;
     public MessageUI messageUI;
-    public SacredSwordController sacredSword; // opsiyonel
+    public SacredSwordController sacredSword; // optional
     public PlayerInput playerInput;
 
     [Header("Settings")]
@@ -21,7 +21,15 @@ public class SacredGateController : MonoBehaviour
     private void Awake()
     {
         if (doorController != null)
+        {
             doorController.SetLocked(true);
+            // güvenlik: kapının override ile kapanan selfInteract'ini aç
+            if (!doorController.selfInteract)
+            {
+                doorController.selfInteract = true;
+                Debug.LogWarning("[SacredGate] Door selfInteract was OFF. Enabled for safety.");
+            }
+        }
     }
 
     private void Start()
@@ -43,15 +51,26 @@ public class SacredGateController : MonoBehaviour
             messageUI?.ShowMessage("The sacred sword must be ignited first!");
             return;
         }
-
-        // kilit açıldıysa Door kendi mantığıyla E'yi dinler; burada ekstra iş yok
+        // kilit açıldıysa DoorController kendi prompt + E akışını yürütür
     }
 
     public void UnlockGate()
     {
         if (isUnlocked) return;
         isUnlocked = true;
-        doorController?.SetLocked(false);
+
+        if (doorController != null)
+        {
+            doorController.SetLocked(false);
+            // güvenlik: yine selfInteract'i ON tut
+            if (!doorController.selfInteract)
+            {
+                doorController.selfInteract = true;
+                Debug.LogWarning("[SacredGate] selfInteract forced ON at unlock.");
+            }
+        }
+
         messageUI?.ShowMessage("The sacred gate is now open.");
+        Debug.Log("🔓 Sacred gate unlocked (SetLocked(false) invoked).");
     }
 }
