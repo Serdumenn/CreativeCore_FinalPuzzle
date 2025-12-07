@@ -55,7 +55,9 @@ public class SacredSwordController : MonoBehaviour
         if (igniteSound != null && !igniteSound.isPlaying) igniteSound.Play();
         if (hornSound   != null && !hornSound.isPlaying)   hornSound.Play();
 
-        messageUI?.ShowMessage("The sacred sword has been ignited!", true);
+        // ESKİ: messageUI.ShowMessage("The sacred sword has been ignited!", true);
+        messageUI?.ShowMessage("The sacred sword has been ignited!");
+
         gateController?.UnlockGate();
 
         Debug.Log("Sacred sword ignited.");

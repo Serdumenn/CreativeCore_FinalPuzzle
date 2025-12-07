@@ -1,50 +1,34 @@
+using System.Collections.Generic;
 using UnityEngine;
-
-public enum PromptPriority { Info = 0, Interact = 1, Warning = 2 }
 
 public class PromptManager : MonoBehaviour
 {
-    public static PromptManager Instance { get; private set; }
-    [SerializeField] private MessageUI messageUI;
-
-    private string activeMessage = "";
-    private PromptPriority activePriority = PromptPriority.Info;
-
-    private void Awake()
+    [System.Serializable]
+    public class Prompt
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        Instance = this;
+        public string message;
+        public MessageUI ui;
     }
 
-    public void Show(string message, PromptPriority priority = PromptPriority.Info, bool force = false)
+    public List<Prompt> prompts = new List<Prompt>();
+
+    public void ShowPrompt(int index)
     {
-        if (messageUI == null)
+        if (index < 0 || index >= prompts.Count)
         {
-            Debug.LogWarning("PromptManager: MessageUI reference missing!");
+            Debug.LogWarning("Prompt index out of range.");
             return;
         }
 
-        if (!force && message == activeMessage && priority == activePriority)
-            return;
-
-        if (priority >= activePriority || force)
+        var p = prompts[index];
+        if (p.ui != null)
         {
-            activeMessage = message;
-            activePriority = priority;
-            messageUI.ShowMessage(message, true);
+            // ESKİ: p.ui.ShowMessage(p.message, 3f);
+            p.ui.ShowMessage(p.message);  // <- DOĞRU ÇAĞRI
         }
-    }
-
-    public void Clear(string message)
-    {
-        if (message == activeMessage)
+        else
         {
-            activeMessage = "";
-            activePriority = PromptPriority.Info;
+            Debug.LogWarning("Prompt UI reference missing.");
         }
     }
 }

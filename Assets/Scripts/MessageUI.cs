@@ -4,93 +4,86 @@ using TMPro;
 
 public class MessageUI : MonoBehaviour
 {
-    [Header("UI")]
-    public TMP_Text messageText;
+    [Header("UI References")]
+    [SerializeField] private TMP_Text messageText;
 
-    [Header("Timing")]
-    [Min(0.0f)] public float fadeInTime  = 0.18f;
-    [Min(0.05f)] public float holdTime   = 1.20f;
-    [Min(0.0f)] public float fadeOutTime = 0.22f;
+    [Header("Fade Settings")]
+    [Range(0f, 1f)]
+    [SerializeField] private float fadeDuration = 0.5f;
+
+    [SerializeField] private float totalTimeVisible = 3f;
 
     private Coroutine showCo;
-    private string lastMessage = "";
     private float currentAlpha = 0f;
 
-    void Awake()
+    private void Awake()
     {
         if (messageText != null)
-        {
-            currentAlpha = 0f;
             messageText.alpha = 0f;
-        }
     }
 
-    public void ShowMessage(string message, bool force = false)
+    public void ShowMessage(string message)
     {
-        if (messageText == null || string.IsNullOrEmpty(message)) return;
+        if (messageText == null)
+        {
+            Debug.LogWarning("MessageUI: No TMP_Text assigned!");
+            return;
+        }
 
-        bool same = (lastMessage == message);
-        if (same && showCo != null && !force) return;
+        messageText.text = message;
 
-        lastMessage = message;
+        if (showCo != null)
+            StopCoroutine(showCo);
 
-        if (showCo != null) StopCoroutine(showCo);
-        showCo = StartCoroutine(ShowRoutine(message));
+        showCo = StartCoroutine(Smooth());
     }
 
-    private IEnumerator ShowRoutine(string msg)
+    public void HideMessage()
     {
-        messageText.text = msg;
+        if (messageText == null) return;
 
-        if (fadeInTime <= 0f)
+        // Fade coroutine çalışıyorsa durdur
+        if (showCo != null)
         {
-            currentAlpha = 1f;
-            messageText.alpha = 1f;
-        }
-        else
-        {
-            float t = 0f;
-            float start = currentAlpha;
-            while (t < fadeInTime)
-            {
-                t += Time.unscaledDeltaTime;
-                currentAlpha = Mathf.Lerp(start, 1f, Smooth(t / fadeInTime));
-                messageText.alpha = currentAlpha;
-                yield return null;
-            }
-            currentAlpha = 1f;
-            messageText.alpha = 1f;
+            StopCoroutine(showCo);
+            showCo = null;
         }
 
-        float h = 0f;
-        while (h < holdTime)
+        // Alpha sıfırlanır, mesaj tamamen kaybolur
+        currentAlpha = 0f;
+        messageText.alpha = 0f;
+    }
+
+    private IEnumerator Smooth()
+    {
+        float t = 0f;
+        float halfTime = fadeDuration;
+
+        currentAlpha = 0f;
+
+        // FADE IN
+        while (t < halfTime)
         {
-            h += Time.unscaledDeltaTime;
+            t += Time.deltaTime;
+            currentAlpha = Mathf.Lerp(0f, 1f, t / halfTime);
+            messageText.alpha = currentAlpha;
             yield return null;
         }
 
-        if (fadeOutTime <= 0f)
+        // GÖRÜNÜR KAL
+        yield return new WaitForSeconds(totalTimeVisible);
+
+        // FADE OUT
+        t = 0f;
+        while (t < halfTime)
         {
-            currentAlpha = 0f;
-            messageText.alpha = 0f;
-        }
-        else
-        {
-            float t2 = 0f;
-            float start2 = currentAlpha;
-            while (t2 < fadeOutTime)
-            {
-                t2 += Time.unscaledDeltaTime;
-                currentAlpha = Mathf.Lerp(start2, 0f, Smooth(t2 / fadeOutTime));
-                messageText.alpha = currentAlpha;
-                yield return null;
-            }
-            currentAlpha = 0f;
-            messageText.alpha = 0f;
+            t += Time.deltaTime;
+            currentAlpha = Mathf.Lerp(1f, 0f, t / halfTime);
+            messageText.alpha = currentAlpha;
+            yield return null;
         }
 
-        showCo = null;
+        currentAlpha = 0f;
+        messageText.alpha = 0f;
     }
-
-    private static float Smooth(float x) => x * x * (3f - 2f * x);
 }
