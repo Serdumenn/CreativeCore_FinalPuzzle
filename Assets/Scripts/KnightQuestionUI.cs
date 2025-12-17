@@ -1,46 +1,80 @@
+using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using UnityEngine.Events;
 
 public class KnightQuestionUI : MonoBehaviour
 {
-    [Header("Buttons")]
-    public Button button_WhoAreYou;
-    public Button button_WhatHappened;
-    public Button button_HowToLeave;
-    public Button button_Close;
+    [Header("Panel Root (CanvasGroup)")]
+    public CanvasGroup panel;          // KnightQuestionPanel üzerinde CanvasGroup olmalı
 
-    // Event: KnightDialogueController bu eventleri dinleyecek
-    public UnityEvent<int> OnQuestionSelected = new UnityEvent<int>();
-    public UnityEvent OnClosePanel = new UnityEvent();
+    [Header("Buttons (order = 0,1,2...)")]
+    public Button[] questionButtons;   // WhoAreYou, WhatHappened, HowToLeave...
+    public Button closeButton;
 
-    private void Start()
+    public event Action<int> QuestionSelected;
+    public event Action CloseRequested;
+
+    private void Awake()
     {
-        // Button click bindings
-        button_WhoAreYou.onClick.AddListener(() => SelectQuestion(0));
-        button_WhatHappened.onClick.AddListener(() => SelectQuestion(1));
-        button_HowToLeave.onClick.AddListener(() => SelectQuestion(2));
+        // Close
+        if (closeButton != null)
+            closeButton.onClick.AddListener(() => CloseRequested?.Invoke());
 
-        // Close button
-        button_Close.onClick.AddListener(() => OnClosePanel.Invoke());
+        // Questions
+        if (questionButtons != null)
+        {
+            for (int i = 0; i < questionButtons.Length; i++)
+            {
+                int index = i;
+                if (questionButtons[i] != null)
+                    questionButtons[i].onClick.AddListener(() => QuestionSelected?.Invoke(index));
+            }
+        }
 
-        // Başlangıçta kapalı olsun
-        HidePanel();
+        Hide(); // oyun başında kapalı kalsın
     }
 
-    private void SelectQuestion(int index)
+    public void SetQuestions(KnightAnswer[] data)
     {
-        OnQuestionSelected.Invoke(index);
+        if (questionButtons == null) return;
+
+        for (int i = 0; i < questionButtons.Length; i++)
+        {
+            bool hasData = data != null && i < data.Length;
+
+            if (questionButtons[i] == null) continue;
+            questionButtons[i].gameObject.SetActive(hasData);
+
+            if (!hasData) continue;
+
+            var label = questionButtons[i].GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+                label.text = data[i].question;
+        }
     }
 
-    public void ShowPanel()
+    public void Show()
     {
         gameObject.SetActive(true);
+
+        if (panel != null)
+        {
+            panel.alpha = 1f;
+            panel.interactable = true;
+            panel.blocksRaycasts = true;
+        }
     }
 
-    public void HidePanel()
+    public void Hide()
     {
+        if (panel != null)
+        {
+            panel.alpha = 0f;
+            panel.interactable = false;
+            panel.blocksRaycasts = false;
+        }
+
         gameObject.SetActive(false);
     }
 }

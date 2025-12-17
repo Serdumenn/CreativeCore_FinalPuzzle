@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: KnightAnswerDatabase
   m_EditorClassIdentifier: 
   answers:
-  - answerText: 'I am the guardian knight of these forgotten halls... '
-    answerClip: {fileID: 0}
-  - answerText: 'Long ago, this chamber protected the sacred flame... '
-    answerClip: {fileID: 0}
-  - answerText: 'Ignite the sacred sword, and the gate shall open for you... '
-    answerClip: {fileID: 0}
+  - question: Who are you?
+    answer: I am the last knight of this keep...
+  - question: What happened here?
+    answer: The gate was sealed when the sword went dark...
+  - question: How can I leave?
+    answer: Ignite the sacred sword, then open the gate...

@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -5,52 +6,63 @@ public class KnightDialogueController : MonoBehaviour
 {
     [Header("References")]
     public Transform player;
-    public float interactDistance = 5f;
+    public PlayerInput playerInput;
+    public PlayerController playerController;
 
     public MessageUI messageUI;
     public KnightQuestionUI questionUI;
-
-    public GameObject answerPanel;
-    public TMPro.TMP_Text answerText;
-
+    public TMP_Text answerText;
     public KnightAnswerDatabase answerDatabase;
-    public AudioSource knightAudio;
-    public PlayerController playerController;
 
-    private bool panelOpen = false;
+    [Header("Settings")]
+    public float interactDistance = 3.5f;
+    public string interactPrompt = "Press [E] to speak";
 
-    private void Start()
+    private InputAction interactAction;
+    private bool panelOpen;
+
+    private bool wasCursorVisible;
+    private CursorLockMode previousLockMode;
+    private string previousActionMap;
+
+    private void Awake()
     {
-        // Güvenlik kontrolleri
-        if (questionUI == null)
+        if (player == null)
         {
-            Debug.LogError("KnightDialogueController: questionUI reference is missing.");
-            return;
+            var p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) player = p.transform;
         }
 
-        if (answerPanel == null)
+        if (player != null)
         {
-            Debug.LogError("KnightDialogueController: answerPanel reference is missing.");
+            if (playerInput == null) playerInput = player.GetComponent<PlayerInput>();
+            if (playerController == null) playerController = player.GetComponent<PlayerController>();
         }
 
-        if (answerText == null)
+        if (playerInput != null)
+            interactAction = playerInput.actions?.FindAction("Interact", throwIfNotFound: false);
+    }
+
+    private void OnEnable()
+    {
+        if (questionUI != null)
         {
-            Debug.LogError("KnightDialogueController: answerText reference is missing.");
+            questionUI.QuestionSelected += OnQuestionSelected;
+            questionUI.CloseRequested += ClosePanel;
         }
 
-        if (answerDatabase == null)
+        interactAction?.Enable();
+    }
+
+    private void OnDisable()
+    {
+        if (questionUI != null)
         {
-            Debug.LogError("KnightDialogueController: answerDatabase reference is missing.");
+            questionUI.QuestionSelected -= OnQuestionSelected;
+            questionUI.CloseRequested -= ClosePanel;
         }
 
-        // KnightQuestionUI eventlerine abone ol
-        questionUI.OnQuestionSelected.AddListener(HandleQuestion);
-        questionUI.OnClosePanel.AddListener(ClosePanel);
-
-        // Başlangıçta kapalı olsun
-        questionUI.HidePanel();
-        if (answerPanel != null)
-            answerPanel.SetActive(false);
+        interactAction?.Disable();
     }
 
     private void Update()
@@ -58,91 +70,92 @@ public class KnightDialogueController : MonoBehaviour
         if (panelOpen) return;
         if (player == null) return;
 
-        float dist = Vector3.Distance(player.position, transform.position);
-        if (dist > interactDistance) return;
+        float d = Vector3.Distance(player.position, transform.position);
+        if (d > interactDistance) return;
 
-        // Etrafındaysan prompt göster
-        messageUI.ShowMessage("Press [E] to speak with the knight.");
+        messageUI?.ShowMessage(interactPrompt);
 
-        // E tuşu ile panel aç
-        if (Keyboard.current != null &&
-            Keyboard.current.eKey.wasPressedThisFrame &&
-            !panelOpen)
-        {
+        if (interactAction != null && interactAction.WasPressedThisFrame())
             OpenPanel();
-        }
     }
 
     private void OpenPanel()
     {
+        if (panelOpen) return;
         panelOpen = true;
 
-        // Mesajı kaldır
-        messageUI.HideMessage();
+        CacheCursor();
+        UnlockCursor();
+        SwitchToUIMap();
 
-        // Oyuncu hareketini kapat
         if (playerController != null)
             playerController.enabled = false;
 
-        // Mouse'u serbest bırak
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        if (answerText != null)
+            answerText.text = string.Empty;
 
-        // Soru panelini aç
-        questionUI.ShowPanel();
+        if (answerDatabase != null && questionUI != null)
+            questionUI.SetQuestions(answerDatabase.answers);
+
+        questionUI?.Show();
     }
 
     private void ClosePanel()
     {
+        if (!panelOpen) return;
         panelOpen = false;
 
-        // Oyuncu kontrolü geri ver
+        questionUI?.Hide();
+
+        RestoreActionMap();
+        RestoreCursor();
+
         if (playerController != null)
             playerController.enabled = true;
-
-        // Mouse'u tekrar kilitle
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        // Panelleri kapat
-        questionUI.HidePanel();
-        if (answerPanel != null)
-            answerPanel.SetActive(false);
-
-        // UI mesajını temizle
-        messageUI.HideMessage();
     }
 
-    private void HandleQuestion(int index)
+    private void OnQuestionSelected(int index)
     {
-        if (answerDatabase == null || answerDatabase.answers == null)
-        {
-            Debug.LogWarning("KnightDialogueController: answerDatabase is not set.");
-            return;
-        }
+        if (answerDatabase == null || answerDatabase.answers == null) return;
+        if (answerText == null) return;
+        if (index < 0 || index >= answerDatabase.answers.Length) return;
 
-        if (index < 0 || index >= answerDatabase.answers.Length)
-        {
-            Debug.LogWarning("KnightDialogueController: answer index out of range: " + index);
-            return;
-        }
+        answerText.text = answerDatabase.answers[index].answer;
+    }
 
-        var ans = answerDatabase.answers[index];
+    private void CacheCursor()
+    {
+        wasCursorVisible = Cursor.visible;
+        previousLockMode = Cursor.lockState;
+    }
 
-        // Yazılı cevabı göster
-        if (answerPanel != null)
-            answerPanel.SetActive(true);
+    private void UnlockCursor()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
 
-        if (answerText != null)
-            answerText.text = ans.answerText;
+    private void RestoreCursor()
+    {
+        Cursor.lockState = previousLockMode;
+        Cursor.visible = wasCursorVisible;
+    }
 
-        // Ses çal (AudioSource atanmadıysa patlamasın)
-        if (knightAudio != null && ans.answerClip != null)
-        {
-            knightAudio.PlayOneShot(ans.answerClip);
-        }
+    private void SwitchToUIMap()
+    {
+        if (playerInput == null) return;
 
-        // 3 saniye sonra panel kapansın
-        Invoke(nameof(ClosePanel), 3f);
+        previousActionMap = playerInput.currentActionMap != null ? playerInput.currentActionMap.name : null;
+
+        var uiMap = playerInput.actions?.FindActionMap("UI", throwIfNotFound: false);
+        if (uiMap != null)
+            playerInput.SwitchCurrentActionMap(uiMap.name);
+    }
+
+    private void RestoreActionMap()
+    {
+        if (playerInput == null) return;
+        if (!string.IsNullOrEmpty(previousActionMap))
+            playerInput.SwitchCurrentActionMap(previousActionMap);
     }
 }

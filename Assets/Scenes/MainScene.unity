@@ -1329,6 +1329,7 @@ GameObject:
   - component: {fileID: 255450543}
   - component: {fileID: 255450542}
   - component: {fileID: 255450544}
+  - component: {fileID: 255450545}
   m_Layer: 5
   m_Name: KnightQuestionPanel
   m_TagString: Untagged
@@ -1410,16 +1411,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd1f174eeee16ab4fb84c972147ecad3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  button_WhoAreYou: {fileID: 0}
-  button_WhatHappened: {fileID: 0}
-  button_HowToLeave: {fileID: 0}
-  button_Close: {fileID: 0}
-  OnQuestionSelected:
-    m_PersistentCalls:
-      m_Calls: []
-  OnClosePanel:
-    m_PersistentCalls:
-      m_Calls: []
+  panel: {fileID: 255450545}
+  questionButtons:
+  - {fileID: 122973910}
+  - {fileID: 1833630992}
+  - {fileID: 394649184}
+  closeButton: {fileID: 325392150}
+--- !u!225 &255450545
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 255450540}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1001 &257593756
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9397,14 +9406,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   player: {fileID: 20417053}
-  interactDistance: 5
+  playerInput: {fileID: 20417056}
+  playerController: {fileID: 20417055}
   messageUI: {fileID: 1109775360}
   questionUI: {fileID: 255450544}
-  answerPanel: {fileID: 2108913809}
   answerText: {fileID: 82628352}
   answerDatabase: {fileID: 11400000, guid: 30e8772256f1fbc46acbb9369731e9c9, type: 2}
-  knightAudio: {fileID: 0}
-  playerController: {fileID: 20417055}
+  interactDistance: 5
+  interactPrompt: Press [E] to speak
 --- !u!82 &981872849
 AudioSource:
   m_ObjectHideFlags: 0
