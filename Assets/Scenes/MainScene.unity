@@ -1411,17 +1411,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd1f174eeee16ab4fb84c972147ecad3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Button_WhoAreYou: {fileID: 122973910}
-  Button_WhatHappened: {fileID: 1833630992}
-  Button_HowToLeave: {fileID: 394649184}
-  Button_Close: {fileID: 325392150}
-  panelGroup: {fileID: 255450545}
-  OnQuestionSelected:
-    m_PersistentCalls:
-      m_Calls: []
-  OnClosePanel:
-    m_PersistentCalls:
-      m_Calls: []
+  questionPanel: {fileID: 255450545}
+  questionButtons: []
+  closeButton: {fileID: 0}
 --- !u!225 &255450545
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -9414,12 +9406,13 @@ MonoBehaviour:
   answerText: {fileID: 82628352}
   messageUI: {fileID: 1109775360}
   answerDatabase: {fileID: 11400000, guid: 30e8772256f1fbc46acbb9369731e9c9, type: 2}
-  player: {fileID: 20417053}
   playerInput: {fileID: 20417056}
   playerController: {fileID: 20417055}
   interactPrompt: Press [E] to speak
   interactDistance: 5
-  endDelay: 2
+  answerDisplaySeconds: 1.5
+  endDelaySeconds: 4
+  finalMessage: Now I will send you...
   menuSceneName: MenuScene
 --- !u!82 &981872849
 AudioSource:
@@ -10568,8 +10561,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   messageText: {fileID: 1109775357}
-  fadeDuration: 0.5
-  totalTimeVisible: 3
+  fadeInTime: 0.15
+  holdTime: 1.2
+  fadeOutTime: 0.2
 --- !u!4 &1110150698 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1288218074956039538, guid: d615b5d940a26d14d92cce654f8fb90a, type: 3}
@@ -12168,7 +12162,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe59b7b0a2705e64fb03b418c4c3e2b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  prompts: []
+  messageUI: {fileID: 1109775360}
 --- !u!4 &1540747572 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1288218074956039538, guid: d615b5d940a26d14d92cce654f8fb90a, type: 3}
@@ -12547,8 +12541,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   messageText: {fileID: 1109775357}
-  fadeDuration: 0.5
-  totalTimeVisible: 3
+  fadeInTime: 0.15
+  holdTime: 1.2
+  fadeOutTime: 0.2
 --- !u!114 &1626154160
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12565,7 +12560,6 @@ MonoBehaviour:
   swordLight: {fileID: 959392640}
   igniteSound: {fileID: 1626154162}
   hornSound: {fileID: 1745472061}
-  messageUI: {fileID: 1109775360}
   gateController: {fileID: 6921062541399137943}
   playerInput: {fileID: 20417056}
   interactDistance: 6
@@ -14719,23 +14713,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 845bb0c02b3e7d74d9cddc8b28452f1f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  doorController: {fileID: 6921062541399137944}
-  messageUI: {fileID: 1109775360}
-  sacredSword: {fileID: 1626154160}
-  playerInput: {fileID: 20417056}
-  interactDistance: 5
-  isUnlocked: 0
---- !u!114 &6921062541399137944 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 210393942182994957, guid: 96ed2db7bebf6424c8b2a82fcd9df4a5, type: 3}
-  m_PrefabInstance: {fileID: 6921062541399137937}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1493210503}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fbf102dedc438f24ca6a91adfb840391, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  gateDoor: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

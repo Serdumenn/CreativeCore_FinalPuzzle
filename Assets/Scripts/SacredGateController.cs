@@ -1,55 +1,38 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class SacredGateController : MonoBehaviour
 {
     [Header("References")]
-    public DoorController doorController;
-    public MessageUI messageUI;
-    public SacredSwordController sacredSword;
-    public PlayerInput playerInput;
+    public DoorController gateDoor;     // SacredGate door'un DoorController'ı
+    public MessageUI messageUI;         // (opsiyonel) eski sistemle mesaj basmak istersen
+    public PromptManager promptManager; // (opsiyonel) boşsa PromptManager.Instance kullanır
 
-    [Header("Settings")]
-    public float interactDistance = 5f;
+    [Header("Prompt")]
+    public bool showPrompt = true;
+    public string lockedPrompt = "The gate is locked.";
+    public string unlockedPrompt = "The gate is unlocked.";
 
-    private Transform player;
-    private InputAction interactAction;
-
+    [Header("State")]
     [SerializeField] private bool isUnlocked = false;
+
+    private const string LockedPromptKey = "The gate is locked.";
+    private const string UnlockedPromptKey = "The gate is unlocked.";
+
     public bool IsUnlocked => isUnlocked;
 
     private void Awake()
     {
-        if (doorController != null)
-        {
-            doorController.SetLocked(true);
-            if (!doorController.selfInteract)
-            {
-                doorController.selfInteract = true;
-                Debug.LogWarning("[SacredGate] Door selfInteract was OFF. Enabled for safety.");
-            }
-        }
+        if (promptManager == null)
+            promptManager = PromptManager.Instance;
     }
 
     private void Start()
     {
-        player = GameObject.FindGameObjectWithTag("Player")?.transform;
-        if (playerInput != null)
-            interactAction = playerInput.actions?.FindAction("Interact", false);
-    }
-
-    private void Update()
-    {
-        if (player == null || doorController == null) return;
-
-        float d = Vector3.Distance(player.position, transform.position);
-        if (d > interactDistance) return;
-
-        if (!isUnlocked)
-        {
-            messageUI?.ShowMessage("The sacred sword must be ignited first!");
-            return;
-        }
+        // Başlangıçta kapıyı kilitle
+        if (gateDoor != null)
+            gateDoor.SetLocked(!isUnlocked);
+        else
+            Debug.LogWarning("[SacredGate] gateDoor reference is missing!");
     }
 
     public void UnlockGate()
@@ -57,17 +40,43 @@ public class SacredGateController : MonoBehaviour
         if (isUnlocked) return;
         isUnlocked = true;
 
-        if (doorController != null)
-        {
-            doorController.SetLocked(false);
-            if (!doorController.selfInteract)
-            {
-                doorController.selfInteract = true;
-                Debug.LogWarning("[SacredGate] selfInteract forced ON at unlock.");
-            }
-        }
+        if (gateDoor != null)
+            gateDoor.SetLocked(false);
 
-        messageUI?.ShowMessage("The sacred gate is now open.");
-        Debug.Log("Sacred gate unlocked (SetLocked(false) invoked).");
+        // Prompt temizliği (kilitli mesajı kalmasın)
+        promptManager?.Clear(lockedPrompt);
+        promptManager?.Show(unlockedPrompt, PromptPriority.Info, force: true);
+
+        // İstersen timed mesaj
+        messageUI?.ShowMessage("You hear the gate unlock.", true);
+
+        Debug.Log("[SacredGate] Gate unlocked!");
+    }
+
+    // İstersen gate yakınındayken bilgi prompt’u gösterelim (opsiyonel)
+    private void OnTriggerStay(Collider other)
+    {
+        if (!showPrompt) return;
+        if (!other.CompareTag("Player")) return;
+
+        var pm = promptManager != null ? promptManager : PromptManager.Instance;
+        if (pm == null) return;
+
+        if (!isUnlocked)
+            pm.Show(lockedPrompt, PromptPriority.Info);
+        else
+            pm.Show(unlockedPrompt, PromptPriority.Info);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!showPrompt) return;
+        if (!other.CompareTag("Player")) return;
+
+        var pm = promptManager != null ? promptManager : PromptManager.Instance;
+        if (pm == null) return;
+
+        pm.Clear(lockedPrompt);
+        pm.Clear(unlockedPrompt);
     }
 }

@@ -6,52 +6,50 @@ using UnityEngine.SceneManagement;
 
 public class KnightDialogueController : MonoBehaviour
 {
-    [Header("UI References")]
+    [Header("References")]
     public KnightQuestionUI questionUI;
-    public TMP_Text answerText;
-    public MessageUI messageUI;
-
-    [Header("Data")]
+    public TMP_Text answerText;                 // optional: can be null
+    public MessageUI messageUI;                 // prompt + final messages
     public KnightAnswerDatabase answerDatabase;
-
-    [Header("Player References")]
-    public Transform player;
     public PlayerInput playerInput;
     public PlayerController playerController;
 
     [Header("Settings")]
     public string interactPrompt = "Press [E] to speak";
     public float interactDistance = 3.5f;
-    public float endDelay = 2.0f;
+
+    [Min(0f)] public float answerDisplaySeconds = 1.5f;
+    [Min(0f)] public float endDelaySeconds = 3.0f;
+    [TextArea] public string finalMessage = "Now I will send you...";
+
+    [Header("Scene")]
     public string menuSceneName = "MenuScene";
 
+    private Transform player;
     private InputAction interactAction;
     private bool panelOpen;
-
+    private bool isEnding;
+    private string previousActionMap;
     private bool wasCursorVisible;
     private CursorLockMode previousLockMode;
-    private string previousActionMap;
+    private Coroutine endCo;
 
-    private Coroutine endRoutine;
+    private const string PromptKey = "KNIGHT_INTERACT";
 
     private void Awake()
     {
-        // Player auto-find
-        if (player == null)
+        var p = GameObject.FindGameObjectWithTag("Player");
+        player = p != null ? p.transform : null;
+
+        if (player != null)
         {
-            var p = GameObject.FindGameObjectWithTag("Player");
-            if (p != null) player = p.transform;
+            if (playerInput == null) playerInput = player.GetComponent<PlayerInput>();
+            if (playerController == null) playerController = player.GetComponent<PlayerController>();
         }
-
-        if (playerInput == null && player != null)
-            playerInput = player.GetComponent<PlayerInput>();
-
-        if (playerController == null && player != null)
-            playerController = player.GetComponent<PlayerController>();
 
         if (playerInput != null)
         {
-            interactAction = playerInput.actions?.FindAction("Interact", throwIfNotFound: false);
+            interactAction = playerInput.actions?.FindAction("Interact", false);
             interactAction?.Enable();
         }
     }
@@ -60,8 +58,8 @@ public class KnightDialogueController : MonoBehaviour
     {
         if (questionUI != null)
         {
-            questionUI.OnQuestionSelected.AddListener(HandleQuestionSelected);
-            questionUI.OnClosePanel.AddListener(ClosePanel);
+            questionUI.OnQuestionSelected += HandleQuestionSelected;
+            questionUI.OnClose += ClosePanel;
         }
     }
 
@@ -69,47 +67,61 @@ public class KnightDialogueController : MonoBehaviour
     {
         if (questionUI != null)
         {
-            questionUI.OnQuestionSelected.RemoveListener(HandleQuestionSelected);
-            questionUI.OnClosePanel.RemoveListener(ClosePanel);
+            questionUI.OnQuestionSelected -= HandleQuestionSelected;
+            questionUI.OnClose -= ClosePanel;
         }
 
-        interactAction?.Disable();
+        PromptManager.Instance?.Clear(PromptKey);
     }
 
     private void Update()
     {
-        if (panelOpen) return;
+        if (isEnding || panelOpen) return;
         if (player == null) return;
 
         float d = Vector3.Distance(player.position, transform.position);
-        if (d > interactDistance) return;
 
-        messageUI?.ShowMessage(interactPrompt);
+        if (d > interactDistance)
+        {
+            PromptManager.Instance?.Clear(PromptKey);
+            return;
+        }
 
-        if (interactAction != null && interactAction.WasPressedThisFrame())
+        // Show stable prompt (no flicker)
+        PromptManager.Instance?.Show(PromptKey, interactPrompt, PromptPriority.Interact);
+
+        if (interactAction == null) return;
+
+        if (interactAction.WasPressedThisFrame())
             OpenPanel();
     }
 
     private void OpenPanel()
     {
-        if (panelOpen) return;
+        if (panelOpen || isEnding) return;
         panelOpen = true;
+
+        PromptManager.Instance?.Clear(PromptKey);
 
         CacheCursor();
         UnlockCursor();
-        SwitchToUIMap();
 
-        if (playerController != null)
-            playerController.enabled = false;
-
-        if (questionUI != null)
+        // Switch to UI map so buttons work
+        if (playerInput != null)
         {
-            questionUI.SetQuestions(answerDatabase != null ? answerDatabase.answers : null);
-            questionUI.Show();
+            previousActionMap = playerInput.currentActionMap != null ? playerInput.currentActionMap.name : "";
+            var uiMap = playerInput.actions?.FindActionMap("UI", false);
+            if (uiMap != null) playerInput.SwitchCurrentActionMap("UI");
         }
 
-        if (answerText != null)
-            answerText.text = string.Empty;
+        if (playerController != null) playerController.enabled = false;
+
+        if (answerDatabase != null && questionUI != null)
+            questionUI.SetQuestions(answerDatabase.answers);
+
+        questionUI?.Show();
+
+        if (answerText != null) answerText.text = "";
     }
 
     private void ClosePanel()
@@ -117,37 +129,58 @@ public class KnightDialogueController : MonoBehaviour
         if (!panelOpen) return;
         panelOpen = false;
 
-        if (endRoutine != null)
-        {
-            StopCoroutine(endRoutine);
-            endRoutine = null;
-        }
-
         RestoreCursor();
-        RestoreActionMap();
 
-        if (playerController != null)
-            playerController.enabled = true;
+        if (playerInput != null && !string.IsNullOrEmpty(previousActionMap))
+            playerInput.SwitchCurrentActionMap(previousActionMap);
+
+        if (playerController != null) playerController.enabled = true;
 
         questionUI?.Hide();
     }
 
     private void HandleQuestionSelected(int index)
     {
-        if (answerDatabase == null || answerDatabase.answers == null) return;
+        if (isEnding) return;
+        if (answerDatabase == null) return;
         if (index < 0 || index >= answerDatabase.answers.Length) return;
 
-        if (answerText != null)
-            answerText.text = answerDatabase.answers[index].answer;
+        // Close panel immediately
+        panelOpen = false;
+        questionUI?.Hide();
 
-        // İstersen paneli kapatma, sadece cevap göster ve bitir.
-        if (endRoutine != null) StopCoroutine(endRoutine);
-        endRoutine = StartCoroutine(EndGameToMenu());
+        // Keep player frozen until end
+        if (playerController != null) playerController.enabled = false;
+        if (playerInput != null) playerInput.DeactivateInput();
+
+        RestoreCursor(); // show cursor OK; optional
+
+        string answer = answerDatabase.answers[index].answer;
+
+        if (answerText != null) answerText.text = answer;
+
+        if (endCo != null) StopCoroutine(endCo);
+        endCo = StartCoroutine(EndFlow(answer));
     }
 
-    private IEnumerator EndGameToMenu()
+    private IEnumerator EndFlow(string answer)
     {
-        yield return new WaitForSeconds(endDelay);
+        isEnding = true;
+
+        // Show answer as timed message
+        if (messageUI != null)
+            messageUI.ShowTimed(answer, true);
+
+        if (answerDisplaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(answerDisplaySeconds);
+
+        // Show final message
+        if (messageUI != null)
+            messageUI.ShowTimed(finalMessage, true);
+
+        if (endDelaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(endDelaySeconds);
+
         SceneManager.LoadScene(menuSceneName);
     }
 
@@ -167,23 +200,5 @@ public class KnightDialogueController : MonoBehaviour
     {
         Cursor.lockState = previousLockMode;
         Cursor.visible = wasCursorVisible;
-    }
-
-    private void SwitchToUIMap()
-    {
-        if (playerInput == null) return;
-
-        previousActionMap = playerInput.currentActionMap != null ? playerInput.currentActionMap.name : null;
-
-        var uiMap = playerInput.actions?.FindActionMap("UI", throwIfNotFound: false);
-        if (uiMap != null)
-            playerInput.SwitchCurrentActionMap(uiMap.name);
-    }
-
-    private void RestoreActionMap()
-    {
-        if (playerInput == null) return;
-        if (!string.IsNullOrEmpty(previousActionMap))
-            playerInput.SwitchCurrentActionMap(previousActionMap);
     }
 }
