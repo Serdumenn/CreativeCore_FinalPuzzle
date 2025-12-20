@@ -1,22 +1,29 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class KnightDialogueController : MonoBehaviour
 {
-    [Header("References")]
+    [Header("UI References")]
+    public KnightQuestionUI questionUI;
+    public TMP_Text answerText;
+    public MessageUI messageUI;
+
+    [Header("Data")]
+    public KnightAnswerDatabase answerDatabase;
+
+    [Header("Player References")]
     public Transform player;
     public PlayerInput playerInput;
     public PlayerController playerController;
 
-    public MessageUI messageUI;
-    public KnightQuestionUI questionUI;
-    public TMP_Text answerText;
-    public KnightAnswerDatabase answerDatabase;
-
     [Header("Settings")]
-    public float interactDistance = 3.5f;
     public string interactPrompt = "Press [E] to speak";
+    public float interactDistance = 3.5f;
+    public float endDelay = 2.0f;
+    public string menuSceneName = "MenuScene";
 
     private InputAction interactAction;
     private bool panelOpen;
@@ -25,41 +32,45 @@ public class KnightDialogueController : MonoBehaviour
     private CursorLockMode previousLockMode;
     private string previousActionMap;
 
+    private Coroutine endRoutine;
+
     private void Awake()
     {
+        // Player auto-find
         if (player == null)
         {
             var p = GameObject.FindGameObjectWithTag("Player");
             if (p != null) player = p.transform;
         }
 
-        if (player != null)
-        {
-            if (playerInput == null) playerInput = player.GetComponent<PlayerInput>();
-            if (playerController == null) playerController = player.GetComponent<PlayerController>();
-        }
+        if (playerInput == null && player != null)
+            playerInput = player.GetComponent<PlayerInput>();
+
+        if (playerController == null && player != null)
+            playerController = player.GetComponent<PlayerController>();
 
         if (playerInput != null)
+        {
             interactAction = playerInput.actions?.FindAction("Interact", throwIfNotFound: false);
+            interactAction?.Enable();
+        }
     }
 
     private void OnEnable()
     {
         if (questionUI != null)
         {
-            questionUI.QuestionSelected += OnQuestionSelected;
-            questionUI.CloseRequested += ClosePanel;
+            questionUI.OnQuestionSelected.AddListener(HandleQuestionSelected);
+            questionUI.OnClosePanel.AddListener(ClosePanel);
         }
-
-        interactAction?.Enable();
     }
 
     private void OnDisable()
     {
         if (questionUI != null)
         {
-            questionUI.QuestionSelected -= OnQuestionSelected;
-            questionUI.CloseRequested -= ClosePanel;
+            questionUI.OnQuestionSelected.RemoveListener(HandleQuestionSelected);
+            questionUI.OnClosePanel.RemoveListener(ClosePanel);
         }
 
         interactAction?.Disable();
@@ -91,13 +102,14 @@ public class KnightDialogueController : MonoBehaviour
         if (playerController != null)
             playerController.enabled = false;
 
+        if (questionUI != null)
+        {
+            questionUI.SetQuestions(answerDatabase != null ? answerDatabase.answers : null);
+            questionUI.Show();
+        }
+
         if (answerText != null)
             answerText.text = string.Empty;
-
-        if (answerDatabase != null && questionUI != null)
-            questionUI.SetQuestions(answerDatabase.answers);
-
-        questionUI?.Show();
     }
 
     private void ClosePanel()
@@ -105,22 +117,38 @@ public class KnightDialogueController : MonoBehaviour
         if (!panelOpen) return;
         panelOpen = false;
 
-        questionUI?.Hide();
+        if (endRoutine != null)
+        {
+            StopCoroutine(endRoutine);
+            endRoutine = null;
+        }
 
-        RestoreActionMap();
         RestoreCursor();
+        RestoreActionMap();
 
         if (playerController != null)
             playerController.enabled = true;
+
+        questionUI?.Hide();
     }
 
-    private void OnQuestionSelected(int index)
+    private void HandleQuestionSelected(int index)
     {
         if (answerDatabase == null || answerDatabase.answers == null) return;
-        if (answerText == null) return;
         if (index < 0 || index >= answerDatabase.answers.Length) return;
 
-        answerText.text = answerDatabase.answers[index].answer;
+        if (answerText != null)
+            answerText.text = answerDatabase.answers[index].answer;
+
+        // İstersen paneli kapatma, sadece cevap göster ve bitir.
+        if (endRoutine != null) StopCoroutine(endRoutine);
+        endRoutine = StartCoroutine(EndGameToMenu());
+    }
+
+    private IEnumerator EndGameToMenu()
+    {
+        yield return new WaitForSeconds(endDelay);
+        SceneManager.LoadScene(menuSceneName);
     }
 
     private void CacheCursor()

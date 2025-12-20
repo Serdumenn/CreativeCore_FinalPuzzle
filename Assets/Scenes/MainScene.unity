@@ -1411,12 +1411,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd1f174eeee16ab4fb84c972147ecad3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  panel: {fileID: 255450545}
-  questionButtons:
-  - {fileID: 122973910}
-  - {fileID: 1833630992}
-  - {fileID: 394649184}
-  closeButton: {fileID: 325392150}
+  Button_WhoAreYou: {fileID: 122973910}
+  Button_WhatHappened: {fileID: 1833630992}
+  Button_HowToLeave: {fileID: 394649184}
+  Button_Close: {fileID: 325392150}
+  panelGroup: {fileID: 255450545}
+  OnQuestionSelected:
+    m_PersistentCalls:
+      m_Calls: []
+  OnClosePanel:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!225 &255450545
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -6490,7 +6495,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -300}
+  m_AnchoredPosition: {x: 0, y: -200}
   m_SizeDelta: {x: 141, y: 43.5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &325392150
@@ -8692,7 +8697,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &899806364
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8709,7 +8714,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 262}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &899806365
@@ -9405,15 +9410,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70af24feda15a804dae12bac900fdc41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  questionUI: {fileID: 255450544}
+  answerText: {fileID: 82628352}
+  messageUI: {fileID: 1109775360}
+  answerDatabase: {fileID: 11400000, guid: 30e8772256f1fbc46acbb9369731e9c9, type: 2}
   player: {fileID: 20417053}
   playerInput: {fileID: 20417056}
   playerController: {fileID: 20417055}
-  messageUI: {fileID: 1109775360}
-  questionUI: {fileID: 255450544}
-  answerText: {fileID: 82628352}
-  answerDatabase: {fileID: 11400000, guid: 30e8772256f1fbc46acbb9369731e9c9, type: 2}
-  interactDistance: 5
   interactPrompt: Press [E] to speak
+  interactDistance: 5
+  endDelay: 2
+  menuSceneName: MenuScene
 --- !u!82 &981872849
 AudioSource:
   m_ObjectHideFlags: 0

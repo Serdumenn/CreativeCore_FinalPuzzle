@@ -1,80 +1,72 @@
-using System;
-using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 public class KnightQuestionUI : MonoBehaviour
 {
-    [Header("Panel Root (CanvasGroup)")]
-    public CanvasGroup panel;          // KnightQuestionPanel üzerinde CanvasGroup olmalı
+    [Header("Buttons")]
+    public Button Button_WhoAreYou;
+    public Button Button_WhatHappened;
+    public Button Button_HowToLeave;
+    public Button Button_Close;
 
-    [Header("Buttons (order = 0,1,2...)")]
-    public Button[] questionButtons;   // WhoAreYou, WhatHappened, HowToLeave...
-    public Button closeButton;
+    [Header("Panel Root (Optional)")]
+    public CanvasGroup panelGroup; // varsa: alpha/interactable/raycast kontrol eder
 
-    public event Action<int> QuestionSelected;
-    public event Action CloseRequested;
+    [Header("Events")]
+    public UnityEvent<int> OnQuestionSelected;   // 0,1,2
+    public UnityEvent OnClosePanel;
 
     private void Awake()
     {
+        // Sorular
+        if (Button_WhoAreYou != null)     Button_WhoAreYou.onClick.AddListener(() => OnQuestionSelected?.Invoke(0));
+        if (Button_WhatHappened != null)  Button_WhatHappened.onClick.AddListener(() => OnQuestionSelected?.Invoke(1));
+        if (Button_HowToLeave != null)    Button_HowToLeave.onClick.AddListener(() => OnQuestionSelected?.Invoke(2));
+
         // Close
-        if (closeButton != null)
-            closeButton.onClick.AddListener(() => CloseRequested?.Invoke());
-
-        // Questions
-        if (questionButtons != null)
-        {
-            for (int i = 0; i < questionButtons.Length; i++)
-            {
-                int index = i;
-                if (questionButtons[i] != null)
-                    questionButtons[i].onClick.AddListener(() => QuestionSelected?.Invoke(index));
-            }
-        }
-
-        Hide(); // oyun başında kapalı kalsın
-    }
-
-    public void SetQuestions(KnightAnswer[] data)
-    {
-        if (questionButtons == null) return;
-
-        for (int i = 0; i < questionButtons.Length; i++)
-        {
-            bool hasData = data != null && i < data.Length;
-
-            if (questionButtons[i] == null) continue;
-            questionButtons[i].gameObject.SetActive(hasData);
-
-            if (!hasData) continue;
-
-            var label = questionButtons[i].GetComponentInChildren<TMP_Text>(true);
-            if (label != null)
-                label.text = data[i].question;
-        }
+        if (Button_Close != null)         Button_Close.onClick.AddListener(() => OnClosePanel?.Invoke());
     }
 
     public void Show()
     {
         gameObject.SetActive(true);
 
-        if (panel != null)
+        if (panelGroup != null)
         {
-            panel.alpha = 1f;
-            panel.interactable = true;
-            panel.blocksRaycasts = true;
+            panelGroup.alpha = 1f;
+            panelGroup.interactable = true;
+            panelGroup.blocksRaycasts = true;
         }
     }
 
     public void Hide()
     {
-        if (panel != null)
+        if (panelGroup != null)
         {
-            panel.alpha = 0f;
-            panel.interactable = false;
-            panel.blocksRaycasts = false;
+            panelGroup.alpha = 0f;
+            panelGroup.interactable = false;
+            panelGroup.blocksRaycasts = false;
         }
 
         gameObject.SetActive(false);
+    }
+
+    public void SetQuestions(KnightAnswer[] answers)
+    {
+        // İstersen soruların varlığına göre butonları kapat/aç
+        SetButtonActive(Button_WhoAreYou,    answers, 0);
+        SetButtonActive(Button_WhatHappened, answers, 1);
+        SetButtonActive(Button_HowToLeave,   answers, 2);
+    }
+
+    private void SetButtonActive(Button b, KnightAnswer[] answers, int index)
+    {
+        if (b == null) return;
+        bool has = answers != null && index >= 0 && index < answers.Length;
+
+        b.gameObject.SetActive(has);
+        // buton textlerini değiştirmek istemiyorsan burada bırak.
+        // İstersen TMP_Text ile label set edebilirsin.
     }
 }
