@@ -1,15 +1,15 @@
-using System.Collections;
-using TMPro;
+// Assets/Scripts/KnightDialogueController.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
+using TMPro;
 using UnityEngine.SceneManagement;
 
 public class KnightDialogueController : MonoBehaviour
 {
     [Header("References")]
     public KnightQuestionUI questionUI;
-    public TMP_Text answerText;                 // optional: can be null
-    public MessageUI messageUI;                 // prompt + final messages
+    public TMP_Text answerText; // optional
+    public MessageUI messageUI;
     public KnightAnswerDatabase answerDatabase;
     public PlayerInput playerInput;
     public PlayerController playerController;
@@ -17,40 +17,53 @@ public class KnightDialogueController : MonoBehaviour
     [Header("Settings")]
     public string interactPrompt = "Press [E] to speak";
     public float interactDistance = 3.5f;
-
+    public Transform player;
     [Min(0f)] public float answerDisplaySeconds = 1.5f;
-    [Min(0f)] public float endDelaySeconds = 3.0f;
+    [Min(0f)] public float endDelaySeconds = 4f;
     [TextArea] public string finalMessage = "Now I will send you...";
 
-    [Header("Scene")]
-    public string menuSceneName = "MenuScene";
-
-    private Transform player;
     private InputAction interactAction;
     private bool panelOpen;
-    private bool isEnding;
-    private string previousActionMap;
     private bool wasCursorVisible;
     private CursorLockMode previousLockMode;
-    private Coroutine endCo;
+    private string currentActionMap;
+    private bool warnedMissingInteract;
+    private bool isEnding;
+    private Coroutine endingCo;
 
-    private const string PromptKey = "KNIGHT_INTERACT";
+    private string promptId;
 
     private void Awake()
     {
-        var p = GameObject.FindGameObjectWithTag("Player");
-        player = p != null ? p.transform : null;
+        promptId = $"KnightPrompt:{GetInstanceID()}";
 
-        if (player != null)
+        if (player == null)
         {
-            if (playerInput == null) playerInput = player.GetComponent<PlayerInput>();
-            if (playerController == null) playerController = player.GetComponent<PlayerController>();
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) player = p.transform;
         }
+
+        if (playerInput == null && player != null)
+            playerInput = player.GetComponent<PlayerInput>();
+
+        if (playerController == null && player != null)
+            playerController = player.GetComponent<PlayerController>();
 
         if (playerInput != null)
         {
-            interactAction = playerInput.actions?.FindAction("Interact", false);
+            interactAction = playerInput.actions?.FindAction("Interact", throwIfNotFound: false);
             interactAction?.Enable();
+            currentActionMap = playerInput.currentActionMap?.name;
+
+            if (interactAction == null && !warnedMissingInteract)
+            {
+                Debug.LogWarning("[KnightDialogue] Interact action not found. Check Input Action Asset for an action named 'Interact'.");
+                warnedMissingInteract = true;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[KnightDialogue] PlayerInput not assigned; UI will not open.");
         }
     }
 
@@ -71,117 +84,133 @@ public class KnightDialogueController : MonoBehaviour
             questionUI.OnClose -= ClosePanel;
         }
 
-        PromptManager.Instance?.Clear(PromptKey);
+        if (interactAction != null)
+            interactAction.Disable();
+
+        PromptManager.Instance?.Clear(promptId);
     }
 
     private void Update()
     {
-        if (isEnding || panelOpen) return;
+        if (panelOpen || isEnding) return;
         if (player == null) return;
 
-        float d = Vector3.Distance(player.position, transform.position);
-
-        if (d > interactDistance)
+        float distance = Vector3.Distance(player.position, transform.position);
+        if (distance > interactDistance)
         {
-            PromptManager.Instance?.Clear(PromptKey);
+            PromptManager.Instance?.Clear(promptId);
             return;
         }
 
-        // Show stable prompt (no flicker)
-        PromptManager.Instance?.Show(PromptKey, interactPrompt, PromptPriority.Interact);
+        PromptManager.Instance?.Show(interactPrompt, promptId, PromptPriority.Critical);
 
-        if (interactAction == null) return;
+        if (interactAction == null)
+        {
+            if (!warnedMissingInteract)
+            {
+                Debug.LogWarning("[KnightDialogue] Interact action is null; cannot open dialogue.");
+                warnedMissingInteract = true;
+            }
+            return;
+        }
 
-        if (interactAction.WasPressedThisFrame())
+        if (!interactAction.enabled)
+            interactAction.Enable();
+
+        if (interactAction.WasPerformedThisFrame())
             OpenPanel();
     }
 
     private void OpenPanel()
     {
-        if (panelOpen || isEnding) return;
+        if (panelOpen) return;
         panelOpen = true;
 
-        PromptManager.Instance?.Clear(PromptKey);
+        PromptManager.Instance?.Clear(promptId);
 
         CacheCursor();
         UnlockCursor();
+        EnableUIInput();
 
-        // Switch to UI map so buttons work
-        if (playerInput != null)
-        {
-            previousActionMap = playerInput.currentActionMap != null ? playerInput.currentActionMap.name : "";
-            var uiMap = playerInput.actions?.FindActionMap("UI", false);
-            if (uiMap != null) playerInput.SwitchCurrentActionMap("UI");
-        }
-
-        if (playerController != null) playerController.enabled = false;
+        if (playerController != null)
+            playerController.enabled = false;
 
         if (answerDatabase != null && questionUI != null)
             questionUI.SetQuestions(answerDatabase.answers);
 
         questionUI?.Show();
 
-        if (answerText != null) answerText.text = "";
+        if (answerText != null)
+            answerText.text = "";
     }
 
     private void ClosePanel()
+    {
+        ClosePanel(true);
+    }
+
+    private void ClosePanel(bool restorePlayer)
     {
         if (!panelOpen) return;
         panelOpen = false;
 
         RestoreCursor();
+        if (restorePlayer)
+            RestorePlayerInput();
 
-        if (playerInput != null && !string.IsNullOrEmpty(previousActionMap))
-            playerInput.SwitchCurrentActionMap(previousActionMap);
-
-        if (playerController != null) playerController.enabled = true;
+        if (playerController != null && restorePlayer)
+            playerController.enabled = true;
 
         questionUI?.Hide();
     }
 
     private void HandleQuestionSelected(int index)
     {
-        if (isEnding) return;
         if (answerDatabase == null) return;
+        if (answerDatabase.answers == null) return;
         if (index < 0 || index >= answerDatabase.answers.Length) return;
+        if (isEnding) return;
 
-        // Close panel immediately
-        panelOpen = false;
-        questionUI?.Hide();
-
-        // Keep player frozen until end
-        if (playerController != null) playerController.enabled = false;
-        if (playerInput != null) playerInput.DeactivateInput();
-
-        RestoreCursor(); // show cursor OK; optional
+        ClosePanel(restorePlayer: false);
 
         string answer = answerDatabase.answers[index].answer;
 
-        if (answerText != null) answerText.text = answer;
+        if (answerText != null)
+            answerText.text = answer;
 
-        if (endCo != null) StopCoroutine(endCo);
-        endCo = StartCoroutine(EndFlow(answer));
+        if (endingCo != null)
+            StopCoroutine(endingCo);
+
+        endingCo = StartCoroutine(EndSequence(answer));
     }
 
-    private IEnumerator EndFlow(string answer)
+    private System.Collections.IEnumerator EndSequence(string answer)
     {
         isEnding = true;
 
-        // Show answer as timed message
+        if (playerController != null)
+            playerController.enabled = false;
+
+        if (playerInput != null)
+            playerInput.DeactivateInput();
+
+        UnlockCursor();
+
+        // 1) Answer timed message
         if (messageUI != null)
-            messageUI.ShowTimed(answer, true);
+            messageUI.ShowTimed(answer, answerDisplaySeconds, force: true);
 
         if (answerDisplaySeconds > 0f)
             yield return new WaitForSecondsRealtime(answerDisplaySeconds);
 
-        // Show final message
+        // 2) Final timed message
         if (messageUI != null)
-            messageUI.ShowTimed(finalMessage, true);
+            messageUI.ShowTimed(finalMessage, endDelaySeconds, force: true);
 
         if (endDelaySeconds > 0f)
             yield return new WaitForSecondsRealtime(endDelaySeconds);
 
-        SceneManager.LoadScene(menuSceneName);
+        SceneManager.LoadScene("MenuScene");
     }
 
     private void CacheCursor()
@@ -200,5 +229,23 @@ public class KnightDialogueController : MonoBehaviour
     {
         Cursor.lockState = previousLockMode;
         Cursor.visible = wasCursorVisible;
+    }
+
+    private void EnableUIInput()
+    {
+        if (playerInput == null) return;
+
+        currentActionMap = playerInput.currentActionMap?.name;
+
+        var uiMap = playerInput.actions?.FindActionMap("UI", throwIfNotFound: false);
+        if (uiMap != null)
+            playerInput.SwitchCurrentActionMap(uiMap.name);
+    }
+
+    private void RestorePlayerInput()
+    {
+        if (playerInput == null) return;
+        if (!string.IsNullOrEmpty(currentActionMap))
+            playerInput.SwitchCurrentActionMap(currentActionMap);
     }
 }

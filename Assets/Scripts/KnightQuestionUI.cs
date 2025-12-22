@@ -1,3 +1,4 @@
+// Assets/Scripts/KnightQuestionUI.cs
 using System;
 using TMPro;
 using UnityEngine;
@@ -22,9 +23,9 @@ public class KnightQuestionUI : MonoBehaviour
         {
             for (int i = 0; i < questionButtons.Length; i++)
             {
-                int captured = i;
+                int capturedIndex = i;
                 if (questionButtons[i] != null)
-                    questionButtons[i].onClick.AddListener(() => OnQuestionSelected?.Invoke(captured));
+                    questionButtons[i].onClick.AddListener(() => OnQuestionSelected?.Invoke(capturedIndex));
             }
         }
     }
@@ -36,9 +37,9 @@ public class KnightQuestionUI : MonoBehaviour
         for (int i = 0; i < questionButtons.Length; i++)
         {
             bool hasData = data != null && i < data.Length;
-            if (questionButtons[i] != null)
-                questionButtons[i].gameObject.SetActive(hasData);
+            if (questionButtons[i] == null) continue;
 
+            questionButtons[i].gameObject.SetActive(hasData);
             if (!hasData) continue;
 
             TMP_Text label = questionButtons[i].GetComponentInChildren<TMP_Text>(true);
@@ -49,13 +50,14 @@ public class KnightQuestionUI : MonoBehaviour
 
     public void Show()
     {
-        gameObject.SetActive(true);
         if (questionPanel != null)
         {
             questionPanel.alpha = 1f;
             questionPanel.interactable = true;
             questionPanel.blocksRaycasts = true;
         }
+
+        gameObject.SetActive(true);
     }
 
     public void Hide()
@@ -66,6 +68,7 @@ public class KnightQuestionUI : MonoBehaviour
             questionPanel.interactable = false;
             questionPanel.blocksRaycasts = false;
         }
+
         gameObject.SetActive(false);
     }
 }

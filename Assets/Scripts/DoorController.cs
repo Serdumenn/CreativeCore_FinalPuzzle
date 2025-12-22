@@ -1,22 +1,23 @@
+// Assets/Scripts/DoorController.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Users;
 
 public class DoorController : MonoBehaviour
 {
-    [Header("Doors")]
+    [Header("Door Parts")]
     public Transform leftDoor;
     public Transform rightDoor;
 
-    [Header("Motion")]
+    [Header("Door Settings")]
     public float openAngle = 90f;
-    public float openSpeed = 5f;
-
-    [Header("Interaction")]
+    public float openSpeed = 2f;
     public float interactDistance = 3f;
     public float viewAngle = 45f;
     public float safeDistance = 1.5f;
-    public bool selfInteract = true;
 
+    [Header("Interaction")]
+    public bool selfInteract = true;
     public PlayerInput playerInput;
     public string interactActionName = "Interact";
 
@@ -27,19 +28,22 @@ public class DoorController : MonoBehaviour
 
     private bool isOpen = false;
     private bool isOpeningInward = true;
-
     private Transform player;
-    private InputAction interactAction;
 
     private Quaternion leftClosedRot, rightClosedRot;
     private Quaternion leftOpenInwardRot, rightOpenInwardRot;
     private Quaternion leftOpenOutwardRot, rightOpenOutwardRot;
 
-    private const string PromptKey = "DOOR_INTERACT";
-    private const string PromptMsg = "Press [E] to open the door.";
+    private InputAction interactAction;
+    private bool loggedCanInteract;
+    private bool hasLoggedMissingAction;
 
-    private void Start()
+    private string promptId;
+    private const string InteractPrompt = "Press [E] to open the door.";
+
+    void Start()
     {
+        promptId = $"DoorPrompt:{GetInstanceID()}";
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
         if (selfInteract)
@@ -50,8 +54,6 @@ public class DoorController : MonoBehaviour
             interactAction = playerInput != null
                 ? playerInput.actions?.FindAction(interactActionName, false)
                 : null;
-
-            interactAction?.Enable();
         }
 
         leftClosedRot = leftDoor.localRotation;
@@ -64,63 +66,68 @@ public class DoorController : MonoBehaviour
         rightOpenOutwardRot = rightClosedRot * Quaternion.Euler(0f, -openAngle, 0f);
     }
 
-    private void Update()
+    void Update()
     {
-        if (player == null)
+        if (player == null) return;
+
+        if (selfInteract && interactAction == null && !hasLoggedMissingAction)
         {
-            PromptManager.Instance?.Clear(PromptKey);
-            return;
+            Debug.LogWarning($"{name}: Interact action '{interactActionName}' not found on PlayerInput.");
+            hasLoggedMissingAction = true;
         }
 
-        if (!selfInteract || isLocked || interactAction == null)
+        bool shouldShowPrompt = false;
+
+        if (selfInteract && !isLocked && interactAction != null)
         {
-            PromptManager.Instance?.Clear(PromptKey);
-            AnimateDoors();
-            return;
-        }
+            float distance = Vector3.Distance(player.position, transform.position);
+            bool isCloseEnough = distance <= interactDistance;
 
-        float distance = Vector3.Distance(player.position, transform.position);
-        bool isCloseEnough = distance <= interactDistance;
+            Vector3 toDoor = (transform.position - player.position).normalized;
+            float angle = Vector3.Angle(player.forward, toDoor);
+            bool isLookingAtDoor = angle < viewAngle;
 
-        Vector3 toDoor = (transform.position - player.position).normalized;
-        float angle = Vector3.Angle(player.forward, toDoor);
-        bool isLookingAtDoor = angle < viewAngle;
+            bool canInteractWithDoor = isCloseEnough && isLookingAtDoor;
 
-        bool canInteract = isCloseEnough && isLookingAtDoor;
-
-        if (canInteract)
-        {
-            PromptManager.Instance?.Show(PromptKey, PromptMsg, PromptPriority.Interact);
-
-            if (interactAction.WasPressedThisFrame())
+            if (canInteractWithDoor)
             {
-                if (!isOpen)
+                shouldShowPrompt = true;
+                PromptManager.Instance?.Show(InteractPrompt, promptId, PromptPriority.Interact);
+
+                if (!loggedCanInteract)
                 {
-                    Vector3 doorForward = transform.forward;
-                    Vector3 playerToDoor = (transform.position - player.position).normalized;
-                    float dot = Vector3.Dot(doorForward, playerToDoor);
-                    isOpeningInward = (dot < 0f);
+                    Debug.Log($"[DoorController] Player can interact with {name} (distance={distance:F2}, angle={angle:F1}).");
+                    loggedCanInteract = true;
                 }
 
-                if (distance > safeDistance)
+                if (interactAction.WasPressedThisFrame())
                 {
-                    isOpen = !isOpen;
-                    PlayDoorSound();
+                    if (!isOpen)
+                    {
+                        Vector3 doorForward = transform.forward;
+                        Vector3 playerToDoor = (transform.position - player.position).normalized;
+                        float dot = Vector3.Dot(doorForward, playerToDoor);
+                        isOpeningInward = (dot < 0f);
+                    }
+
+                    if (distance > safeDistance)
+                    {
+                        isOpen = !isOpen;
+                        PlayDoorSound();
+                        Debug.Log($"[DoorController] {name} toggled state. Now open={isOpen}.");
+                    }
                 }
             }
+            else
+            {
+                loggedCanInteract = false;
+            }
         }
-        else
-        {
-            PromptManager.Instance?.Clear(PromptKey);
-        }
 
-        AnimateDoors();
-    }
+        if (!shouldShowPrompt)
+            PromptManager.Instance?.Clear(promptId);
 
-    private void AnimateDoors()
-    {
-        if (leftDoor == null || rightDoor == null) return;
-
+        // Door animation
         if (isOpen)
         {
             if (isOpeningInward)
@@ -144,12 +151,7 @@ public class DoorController : MonoBehaviour
     private void PlayDoorSound()
     {
         if (doorSound != null) doorSound.Play();
-    }
-
-    public void SetLocked(bool locked)
-    {
-        isLocked = locked;
-        if (isLocked) isOpen = false;
+        else Debug.LogWarning($"{name}: Missing doorSound AudioSource reference!");
     }
 
     public void ToggleDoor()
@@ -157,6 +159,13 @@ public class DoorController : MonoBehaviour
         if (isLocked) return;
         isOpen = !isOpen;
         PlayDoorSound();
+    }
+
+    public void SetLocked(bool locked)
+    {
+        isLocked = locked;
+        if (isLocked) isOpen = false;
+        Debug.Log($"[DoorController] {name} lock state updated: locked={isLocked}.");
     }
 
     public bool IsPlayerLookingAtDoor()

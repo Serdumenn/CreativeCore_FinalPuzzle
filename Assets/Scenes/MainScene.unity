@@ -9410,10 +9410,10 @@ MonoBehaviour:
   playerController: {fileID: 20417055}
   interactPrompt: Press [E] to speak
   interactDistance: 5
+  player: {fileID: 20417053}
   answerDisplaySeconds: 1.5
   endDelaySeconds: 4
   finalMessage: Now I will send you...
-  menuSceneName: MenuScene
 --- !u!82 &981872849
 AudioSource:
   m_ObjectHideFlags: 0
@@ -12162,7 +12162,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe59b7b0a2705e64fb03b418c4c3e2b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  messageUI: {fileID: 1109775360}
+  promptText: {fileID: 0}
+  promptRoot: {fileID: 0}
 --- !u!4 &1540747572 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1288218074956039538, guid: d615b5d940a26d14d92cce654f8fb90a, type: 3}
@@ -12560,6 +12561,7 @@ MonoBehaviour:
   swordLight: {fileID: 959392640}
   igniteSound: {fileID: 1626154162}
   hornSound: {fileID: 1745472061}
+  messageUI: {fileID: 0}
   gateController: {fileID: 6921062541399137943}
   playerInput: {fileID: 20417056}
   interactDistance: 6
@@ -14714,6 +14716,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gateDoor: {fileID: 0}
+  messageUI: {fileID: 0}
+  isUnlocked: 0
+  unlockedMessage: The gate is now unlocked.
+  unlockedMessageSeconds: 2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

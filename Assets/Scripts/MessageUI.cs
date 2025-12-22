@@ -1,130 +1,138 @@
+// Assets/Scripts/MessageUI.cs
 using System.Collections;
-using TMPro;
 using UnityEngine;
+using TMPro;
 
 public class MessageUI : MonoBehaviour
 {
-    private enum Mode { None, Prompt, Timed }
+    private enum DisplayMode { None, Timed }
 
-    [Header("UI")]
+    [Header("UI (Timed Messages)")]
     public TMP_Text messageText;
 
-    [Header("Timing")]
-    [Min(0f)] public float fadeInTime = 0.15f;
-    [Min(0f)] public float holdTime = 1.25f;
-    [Min(0f)] public float fadeOutTime = 0.20f;
+    [Header("Timing (Default)")]
+    [Min(0.0f)] public float fadeInTime  = 0.18f;
+    [Min(0.05f)] public float holdTime   = 1.20f;
+    [Min(0.0f)] public float fadeOutTime = 0.22f;
 
-    private Coroutine co;
-    private string current = "";
-    private Mode mode = Mode.None;
+    private Coroutine showCo;
+    private string lastMessage = "";
+    private float currentAlpha = 0f;
+    private DisplayMode mode = DisplayMode.None;
 
-    private void Awake()
+    void Awake()
     {
         if (messageText != null)
-            messageText.alpha = 0f;
-    }
-
-    /// <summary>Timed message (fade in -> hold -> fade out). force=true mesaj aynı bile olsa yeniden gösterir.</summary>
-    public void ShowMessage(string msg, bool force = false)
-    {
-        if (messageText == null) return;
-        if (string.IsNullOrWhiteSpace(msg)) return;
-
-        if (!force && mode == Mode.Timed && current == msg && co != null)
-            return;
-
-        current = msg;
-        mode = Mode.Timed;
-
-        if (co != null) StopCoroutine(co);
-        co = StartCoroutine(TimedRoutine(msg));
-    }
-
-    /// <summary>Persistent prompt (flicker yapmaz). PromptManager bunu kullanır.</summary>
-    public void ShowPrompt(string msg)
-    {
-        if (messageText == null) return;
-        if (string.IsNullOrWhiteSpace(msg)) return;
-
-        if (mode == Mode.Prompt && current == msg)
-            return;
-
-        current = msg;
-        mode = Mode.Prompt;
-
-        if (co != null)
         {
-            StopCoroutine(co);
-            co = null;
+            currentAlpha = 0f;
+            messageText.alpha = 0f;
+            messageText.text = "";
+        }
+    }
+
+    /// <summary>
+    /// Uses default holdTime.
+    /// </summary>
+    public void ShowMessage(string message, bool force = false)
+    {
+        if (messageText == null || string.IsNullOrEmpty(message)) return;
+
+        bool same = (lastMessage == message);
+        if (same && showCo != null && !force) return;
+
+        lastMessage = message;
+        mode = DisplayMode.Timed;
+
+        if (showCo != null) StopCoroutine(showCo);
+        showCo = StartCoroutine(ShowRoutine(message, holdTime));
+    }
+
+    /// <summary>
+    /// Per-call hold duration override. This is what your Knight end-flow should use.
+    /// </summary>
+    public void ShowTimed(string message, float seconds, bool force = true)
+    {
+        if (messageText == null || string.IsNullOrEmpty(message)) return;
+
+        bool same = (lastMessage == message);
+        if (same && showCo != null && !force) return;
+
+        lastMessage = message;
+        mode = DisplayMode.Timed;
+
+        if (showCo != null) StopCoroutine(showCo);
+        showCo = StartCoroutine(ShowRoutine(message, Mathf.Max(0f, seconds)));
+    }
+
+    public void ClearMessage()
+    {
+        if (messageText == null) return;
+
+        if (showCo != null)
+        {
+            StopCoroutine(showCo);
+            showCo = null;
         }
 
-        messageText.text = msg;
-        messageText.alpha = 1f;
-    }
-
-    public void ClearPrompt(string msg)
-    {
-        if (messageText == null) return;
-        if (mode != Mode.Prompt) return;
-        if (current != msg) return;
-
-        current = "";
-        mode = Mode.None;
+        lastMessage = "";
+        mode = DisplayMode.None;
         messageText.text = "";
+        currentAlpha = 0f;
         messageText.alpha = 0f;
     }
 
-    private IEnumerator TimedRoutine(string msg)
+    private IEnumerator ShowRoutine(string msg, float holdSeconds)
     {
         messageText.text = msg;
 
-        // NOTE: Prompt modundayken timed mesaj basılırsa promptu ezer (istenen davranış).
         // Fade in
         if (fadeInTime <= 0f)
         {
+            currentAlpha = 1f;
             messageText.alpha = 1f;
         }
         else
         {
             float t = 0f;
-            float a0 = messageText.alpha;
+            float start = currentAlpha;
             while (t < fadeInTime)
             {
                 t += Time.unscaledDeltaTime;
-                float k = Smooth01(t / fadeInTime);
-                messageText.alpha = Mathf.Lerp(a0, 1f, k);
+                currentAlpha = Mathf.Lerp(start, 1f, Smooth(t / fadeInTime));
+                messageText.alpha = currentAlpha;
                 yield return null;
             }
+            currentAlpha = 1f;
             messageText.alpha = 1f;
         }
 
         // Hold
-        if (holdTime > 0f)
-            yield return new WaitForSecondsRealtime(holdTime);
+        if (holdSeconds > 0f)
+            yield return new WaitForSecondsRealtime(holdSeconds);
 
         // Fade out
         if (fadeOutTime <= 0f)
         {
+            currentAlpha = 0f;
             messageText.alpha = 0f;
         }
         else
         {
-            float t = 0f;
-            float a0 = messageText.alpha;
-            while (t < fadeOutTime)
+            float t2 = 0f;
+            float start2 = currentAlpha;
+            while (t2 < fadeOutTime)
             {
-                t += Time.unscaledDeltaTime;
-                float k = Smooth01(t / fadeOutTime);
-                messageText.alpha = Mathf.Lerp(a0, 0f, k);
+                t2 += Time.unscaledDeltaTime;
+                currentAlpha = Mathf.Lerp(start2, 0f, Smooth(t2 / fadeOutTime));
+                messageText.alpha = currentAlpha;
                 yield return null;
             }
+            currentAlpha = 0f;
             messageText.alpha = 0f;
         }
 
-        co = null;
-        mode = Mode.None;
-        current = "";
+        showCo = null;
     }
 
-    private static float Smooth01(float x) => x * x * (3f - 2f * x);
+    private static float Smooth(float x) => x * x * (3f - 2f * x);
 }
