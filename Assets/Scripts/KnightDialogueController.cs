@@ -1,36 +1,42 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using TMPro;
 using UnityEngine.SceneManagement;
 
 public class KnightDialogueController : MonoBehaviour
 {
     [Header("References")]
     public KnightQuestionUI questionUI;
-    public TMP_Text answerText; // optional
     public MessageUI messageUI;
-    public KnightAnswerDatabase answerDatabase;
     public PlayerInput playerInput;
     public PlayerController playerController;
-    public SacredGateController gateController; // optional (recommend)
+
+    [Header("3D Voice (AudioSource on Knight)")]
+    public AudioSource voiceSource;
+
+    [Tooltip("Plays when panel opens (E pressed).")]
+    public AudioClip greetingClip;
+
+    [Tooltip("Plays when question is selected.")]
+    public AudioClip finalClip;
 
     [Header("Settings")]
     public string interactPrompt = "Press [E] to speak";
     public float interactDistance = 3.5f;
     public Transform player;
-    [Min(0f)] public float answerDisplaySeconds = 2.5f;
-    [Min(0f)] public float endDelaySeconds = 4.5f;
-    [TextArea] public string finalMessage = "Now I will send you...";
-    [TextArea] public string lockedMessage = "Prove yourself first. Ignite the Sacred Sword and unlock the gate.";
+
+    [Min(0f)] public float answerDisplaySeconds = 7.2f;
+    [Min(0f)] public float endDelaySeconds = 0.0f;
+    public string answerLine = "Now I am sending you on your way, traveler. For this is your destiny.";
 
     private InputAction interactAction;
     private bool panelOpen;
+    private bool isEnding;
+
     private bool wasCursorVisible;
     private CursorLockMode previousLockMode;
     private string currentActionMap;
-    private bool isEnding;
-    private Coroutine endingCo;
 
+    private Coroutine endingCo;
     private string promptId;
 
     private void Awake()
@@ -52,6 +58,16 @@ public class KnightDialogueController : MonoBehaviour
             interactAction?.Enable();
             currentActionMap = playerInput.currentActionMap?.name;
         }
+        else
+        {
+            Debug.LogWarning("[KnightDialogue] PlayerInput not assigned.");
+        }
+
+        if (voiceSource == null)
+            voiceSource = GetComponent<AudioSource>();
+
+        if (voiceSource == null)
+            Debug.LogWarning("[KnightDialogue] voiceSource missing. Add an AudioSource to Knight or assign one.");
     }
 
     private void OnEnable()
@@ -60,6 +76,10 @@ public class KnightDialogueController : MonoBehaviour
         {
             questionUI.OnQuestionSelected += HandleQuestionSelected;
             questionUI.OnClose += ClosePanel;
+        }
+        else
+        {
+            Debug.LogWarning("[KnightDialogue] questionUI reference missing.");
         }
     }
 
@@ -86,16 +106,6 @@ public class KnightDialogueController : MonoBehaviour
             return;
         }
 
-        // Gate şartı (önerilen)
-        if (gateController != null && !gateController.IsUnlocked)
-        {
-            PromptManager.Instance?.Show(lockedMessage, promptId, PromptPriority.Warning);
-            // istersek E basınca sadece timed bir uyarı da gösterebiliriz
-            if (interactAction.WasPressedThisFrame() && messageUI != null)
-                messageUI.ShowTimed(lockedMessage, 2.0f, force: true);
-            return;
-        }
-
         PromptManager.Instance?.Show(interactPrompt, promptId, PromptPriority.Critical);
 
         if (interactAction.WasPressedThisFrame())
@@ -116,13 +126,9 @@ public class KnightDialogueController : MonoBehaviour
         if (playerController != null)
             playerController.enabled = false;
 
-        if (answerDatabase != null && questionUI != null)
-            questionUI.SetQuestions(answerDatabase.answers);
+        PlayVoice(greetingClip);
 
         questionUI?.Show();
-
-        if (answerText != null)
-            answerText.text = string.Empty;
     }
 
     private void ClosePanel()
@@ -148,24 +154,19 @@ public class KnightDialogueController : MonoBehaviour
 
     private void HandleQuestionSelected(int index)
     {
-        if (answerDatabase == null || answerDatabase.answers == null) return;
-        if (index < 0 || index >= answerDatabase.answers.Length) return;
+        Debug.Log($"[KnightDialogue] Question selected (single-button mode). index={index}");
+
         if (isEnding) return;
 
         ClosePanel(restorePlayer: false);
 
-        string answer = answerDatabase.answers[index].answer;
-
-        if (answerText != null)
-            answerText.text = answer;
-
         if (endingCo != null)
             StopCoroutine(endingCo);
 
-        endingCo = StartCoroutine(EndSequence(answer));
+        endingCo = StartCoroutine(EndSequence());
     }
 
-    private System.Collections.IEnumerator EndSequence(string answer)
+    private System.Collections.IEnumerator EndSequence()
     {
         isEnding = true;
 
@@ -177,19 +178,30 @@ public class KnightDialogueController : MonoBehaviour
 
         UnlockCursor();
 
+        PlayVoice(finalClip, stopFirst: true);
+
         if (messageUI != null)
-            messageUI.ShowTimed(answer, answerDisplaySeconds, force: true);
+            messageUI.ShowPersistent(answerLine, force: true);
+        else
+            Debug.LogWarning("[KnightDialogue] messageUI missing; cannot show answer.");
 
         if (answerDisplaySeconds > 0f)
             yield return new WaitForSecondsRealtime(answerDisplaySeconds);
-
-        if (messageUI != null)
-            messageUI.ShowTimed(finalMessage, endDelaySeconds, force: true);
 
         if (endDelaySeconds > 0f)
             yield return new WaitForSecondsRealtime(endDelaySeconds);
 
         SceneManager.LoadScene("MenuScene");
+    }
+
+    private void PlayVoice(AudioClip clip, bool stopFirst = false)
+    {
+        if (voiceSource == null || clip == null) return;
+
+        if (stopFirst && voiceSource.isPlaying)
+            voiceSource.Stop();
+
+        voiceSource.PlayOneShot(clip);
     }
 
     private void CacheCursor()

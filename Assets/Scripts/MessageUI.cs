@@ -4,7 +4,7 @@ using TMPro;
 
 public class MessageUI : MonoBehaviour
 {
-    private enum DisplayMode { None, Timed }
+    private enum DisplayMode { None, Timed, Persistent }
 
     [Header("UI (Timed Messages)")]
     public TMP_Text messageText;
@@ -29,11 +29,13 @@ public class MessageUI : MonoBehaviour
         }
     }
 
+    // Keeps your existing API
     public void ShowMessage(string message, bool force = false)
     {
         ShowTimed(message, holdTime, force);
     }
 
+    // Keeps your existing API
     public void ShowTimed(string message, float seconds, bool force = true)
     {
         if (messageText == null || string.IsNullOrEmpty(message)) return;
@@ -48,7 +50,35 @@ public class MessageUI : MonoBehaviour
         showCo = StartCoroutine(ShowRoutine(message, Mathf.Max(0f, seconds)));
     }
 
-    public void ClearMessage()
+    /// <summary>
+    /// Shows a message and keeps it visible indefinitely (no auto fade-out).
+    /// Use this for "final" lines that must remain until scene load.
+    /// </summary>
+    public void ShowPersistent(string message, bool force = true)
+    {
+        if (messageText == null || string.IsNullOrEmpty(message)) return;
+
+        bool same = (lastMessage == message);
+        if (same && mode == DisplayMode.Persistent && !force) return;
+
+        if (showCo != null)
+        {
+            StopCoroutine(showCo);
+            showCo = null;
+        }
+
+        lastMessage = message;
+        mode = DisplayMode.Persistent;
+
+        messageText.text = message;
+        currentAlpha = 1f;
+        messageText.alpha = 1f;
+    }
+
+    /// <summary>
+    /// Immediately clears any message (timed or persistent).
+    /// </summary>
+    public void HideImmediate()
     {
         if (messageText == null) return;
 
@@ -63,6 +93,12 @@ public class MessageUI : MonoBehaviour
         messageText.text = "";
         currentAlpha = 0f;
         messageText.alpha = 0f;
+    }
+
+    // Keeps your existing API name
+    public void ClearMessage()
+    {
+        HideImmediate();
     }
 
     private IEnumerator ShowRoutine(string msg, float holdSeconds)
@@ -92,6 +128,13 @@ public class MessageUI : MonoBehaviour
 
         if (holdSeconds > 0f)
             yield return new WaitForSecondsRealtime(holdSeconds);
+
+        // If someone switched us to Persistent while we were waiting, do not fade out.
+        if (mode == DisplayMode.Persistent)
+        {
+            showCo = null;
+            yield break;
+        }
 
         // Fade out
         if (fadeOutTime <= 0f)
