@@ -2,81 +2,52 @@ using UnityEngine;
 
 public class SacredGateController : MonoBehaviour
 {
-    [Header("References")]
-    public DoorController gateDoor;     // SacredGate door'un DoorController'ı
-    public MessageUI messageUI;         // (opsiyonel) eski sistemle mesaj basmak istersen
-    public PromptManager promptManager; // (opsiyonel) boşsa PromptManager.Instance kullanır
+    [Header("Gate Door")]
+    public DoorController gateDoor;
 
-    [Header("Prompt")]
-    public bool showPrompt = true;
+    [Header("UI")]
     public string lockedPrompt = "The gate is locked.";
-    public string unlockedPrompt = "The gate is unlocked.";
+    public string unlockedPrompt = "Press [E] to open the gate.";
 
-    [Header("State")]
-    [SerializeField] private bool isUnlocked = false;
-
-    private const string LockedPromptKey = "The gate is locked.";
-    private const string UnlockedPromptKey = "The gate is unlocked.";
-
-    public bool IsUnlocked => isUnlocked;
+    public bool IsUnlocked { get; private set; }
 
     private void Awake()
     {
-        if (promptManager == null)
-            promptManager = PromptManager.Instance;
-    }
+        // Kapı referansı boşsa otomatik bulmayı dene (aynı objede / child)
+        if (gateDoor == null)
+            gateDoor = GetComponentInChildren<DoorController>();
 
-    private void Start()
-    {
-        // Başlangıçta kapıyı kilitle
+        // Başta kilitli başlatmak istiyorsan:
         if (gateDoor != null)
-            gateDoor.SetLocked(!isUnlocked);
-        else
-            Debug.LogWarning("[SacredGate] gateDoor reference is missing!");
+            gateDoor.SetLocked(true);
     }
 
     public void UnlockGate()
     {
-        if (isUnlocked) return;
-        isUnlocked = true;
+        IsUnlocked = true;
 
         if (gateDoor != null)
             gateDoor.SetLocked(false);
 
-        // Prompt temizliği (kilitli mesajı kalmasın)
-        promptManager?.Clear(lockedPrompt);
-        promptManager?.Show(unlockedPrompt, PromptPriority.Info, force: true);
-
-        // İstersen timed mesaj
-        messageUI?.ShowMessage("You hear the gate unlock.", true);
-
-        Debug.Log("[SacredGate] Gate unlocked!");
+        // Prompt “kapıya yaklaşınca” DoorController’dan zaten geleceği için burada zorlamıyoruz.
+        // İstersen kısa bir timed mesaj basabilirsin:
+        // FindFirstObjectByType<MessageUI>()?.ShowMessage("You hear the gate unlock.", true);
     }
 
-    // İstersen gate yakınındayken bilgi prompt’u gösterelim (opsiyonel)
+    // İstersen kapıya yaklaşınca locked bilgisini göstermek için:
     private void OnTriggerStay(Collider other)
     {
-        if (!showPrompt) return;
         if (!other.CompareTag("Player")) return;
 
-        var pm = promptManager != null ? promptManager : PromptManager.Instance;
-        if (pm == null) return;
-
-        if (!isUnlocked)
-            pm.Show(lockedPrompt, PromptPriority.Info);
+        if (!IsUnlocked)
+            PromptManager.Instance?.Show(lockedPrompt, PromptPriority.Info);
         else
-            pm.Show(unlockedPrompt, PromptPriority.Info);
+            PromptManager.Instance?.Clear(lockedPrompt);
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!showPrompt) return;
         if (!other.CompareTag("Player")) return;
-
-        var pm = promptManager != null ? promptManager : PromptManager.Instance;
-        if (pm == null) return;
-
-        pm.Clear(lockedPrompt);
-        pm.Clear(unlockedPrompt);
+        PromptManager.Instance?.Clear(lockedPrompt);
     }
 }

@@ -9,78 +9,68 @@ public class MessageUI : MonoBehaviour
     [Header("UI")]
     public TMP_Text messageText;
 
-    [Header("Timing (Timed messages)")]
+    [Header("Timing")]
     [Min(0f)] public float fadeInTime = 0.15f;
-    [Min(0f)] public float holdTime = 1.20f;
+    [Min(0f)] public float holdTime = 1.25f;
     [Min(0f)] public float fadeOutTime = 0.20f;
 
-    private Coroutine timedCo;
-    private float currentAlpha = 0f;
-    private string lastPrompt = "";
+    private Coroutine co;
+    private string current = "";
     private Mode mode = Mode.None;
 
     private void Awake()
     {
         if (messageText != null)
-        {
-            messageText.text = "";
             messageText.alpha = 0f;
-            currentAlpha = 0f;
-            mode = Mode.None;
-        }
     }
 
-    // TIMED: fades in, holds, fades out
-    public void ShowTimed(string message, bool force = false)
+    /// <summary>Timed message (fade in -> hold -> fade out). force=true mesaj aynı bile olsa yeniden gösterir.</summary>
+    public void ShowMessage(string msg, bool force = false)
     {
         if (messageText == null) return;
-        if (string.IsNullOrWhiteSpace(message)) return;
+        if (string.IsNullOrWhiteSpace(msg)) return;
 
-        // If we're already showing the same timed message and not forced, ignore.
-        if (!force && mode == Mode.Timed && messageText.text == message && timedCo != null)
+        if (!force && mode == Mode.Timed && current == msg && co != null)
             return;
 
+        current = msg;
         mode = Mode.Timed;
 
-        if (timedCo != null) StopCoroutine(timedCo);
-        timedCo = StartCoroutine(TimedRoutine(message));
+        if (co != null) StopCoroutine(co);
+        co = StartCoroutine(TimedRoutine(msg));
     }
 
-    // PROMPT: persistent (no fade), stays until ClearPrompt()
-    public void ShowPrompt(string message)
+    /// <summary>Persistent prompt (flicker yapmaz). PromptManager bunu kullanır.</summary>
+    public void ShowPrompt(string msg)
     {
         if (messageText == null) return;
-        if (string.IsNullOrWhiteSpace(message)) return;
+        if (string.IsNullOrWhiteSpace(msg)) return;
 
-        // If already same prompt, do nothing
-        if (mode == Mode.Prompt && lastPrompt == message)
+        if (mode == Mode.Prompt && current == msg)
             return;
 
-        // Stop timed routine if running
-        if (timedCo != null)
+        current = msg;
+        mode = Mode.Prompt;
+
+        if (co != null)
         {
-            StopCoroutine(timedCo);
-            timedCo = null;
+            StopCoroutine(co);
+            co = null;
         }
 
-        mode = Mode.Prompt;
-        lastPrompt = message;
-
-        messageText.text = message;
-        currentAlpha = 1f;
+        messageText.text = msg;
         messageText.alpha = 1f;
     }
 
-    public void ClearPrompt()
+    public void ClearPrompt(string msg)
     {
         if (messageText == null) return;
         if (mode != Mode.Prompt) return;
+        if (current != msg) return;
 
-        lastPrompt = "";
+        current = "";
         mode = Mode.None;
-
         messageText.text = "";
-        currentAlpha = 0f;
         messageText.alpha = 0f;
     }
 
@@ -88,24 +78,23 @@ public class MessageUI : MonoBehaviour
     {
         messageText.text = msg;
 
+        // NOTE: Prompt modundayken timed mesaj basılırsa promptu ezer (istenen davranış).
         // Fade in
         if (fadeInTime <= 0f)
         {
-            currentAlpha = 1f;
             messageText.alpha = 1f;
         }
         else
         {
             float t = 0f;
-            float start = currentAlpha;
+            float a0 = messageText.alpha;
             while (t < fadeInTime)
             {
                 t += Time.unscaledDeltaTime;
-                currentAlpha = Mathf.Lerp(start, 1f, Smooth01(t / fadeInTime));
-                messageText.alpha = currentAlpha;
+                float k = Smooth01(t / fadeInTime);
+                messageText.alpha = Mathf.Lerp(a0, 1f, k);
                 yield return null;
             }
-            currentAlpha = 1f;
             messageText.alpha = 1f;
         }
 
@@ -116,56 +105,26 @@ public class MessageUI : MonoBehaviour
         // Fade out
         if (fadeOutTime <= 0f)
         {
-            currentAlpha = 0f;
             messageText.alpha = 0f;
         }
         else
         {
-            float t2 = 0f;
-            float start2 = currentAlpha;
-            while (t2 < fadeOutTime)
+            float t = 0f;
+            float a0 = messageText.alpha;
+            while (t < fadeOutTime)
             {
-                t2 += Time.unscaledDeltaTime;
-                currentAlpha = Mathf.Lerp(start2, 0f, Smooth01(t2 / fadeOutTime));
-                messageText.alpha = currentAlpha;
+                t += Time.unscaledDeltaTime;
+                float k = Smooth01(t / fadeOutTime);
+                messageText.alpha = Mathf.Lerp(a0, 0f, k);
                 yield return null;
             }
-            currentAlpha = 0f;
             messageText.alpha = 0f;
         }
 
-        // Clear text after fading out (optional, keeps clean)
-        if (mode == Mode.Timed)
-        {
-            messageText.text = "";
-            mode = Mode.None;
-        }
-
-        timedCo = null;
+        co = null;
+        mode = Mode.None;
+        current = "";
     }
 
-    private static float Smooth01(float x)
-    {
-        x = Mathf.Clamp01(x);
-        return x * x * (3f - 2f * x);
-    }
-
-    // -------------------------
-    // BACKWARD COMPATIBILITY
-    // Old scripts call ShowMessage(...)
-    // -------------------------
-    public void ShowMessage(string message, bool force = false)
-    {
-        ShowTimed(message, force);
-    }
-
-    public void ShowMessage(string message)
-    {
-        ShowTimed(message, true);
-    }
-
-    public void ClearMessage()
-    {
-        ClearPrompt();
-    }
+    private static float Smooth01(float x) => x * x * (3f - 2f * x);
 }

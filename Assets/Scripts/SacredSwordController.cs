@@ -8,18 +8,17 @@ public class SacredSwordController : MonoBehaviour
     public Light swordLight;
     public AudioSource igniteSound;
     public AudioSource hornSound;
+
     public SacredGateController gateController;
     public PlayerInput playerInput;
 
     [Header("Settings")]
     public float interactDistance = 5f;
+    public string interactPrompt = "Press [E] to ignite the sacred sword.";
 
     private Transform player;
-    private bool isActivated = false;
     private InputAction interactAction;
-
-    private const string PromptKey = "SWORD_INTERACT";
-    private const string PromptMsg = "Press [E] to ignite the sacred sword.";
+    private bool isActivated;
 
     private void Start()
     {
@@ -40,46 +39,34 @@ public class SacredSwordController : MonoBehaviour
 
     private void Update()
     {
-        if (player == null || interactAction == null)
-        {
-            PromptManager.Instance?.Clear(PromptKey);
-            return;
-        }
+        if (isActivated) return;
+        if (player == null || interactAction == null) return;
 
-        if (isActivated)
+        float d = Vector3.Distance(player.position, transform.position);
+        if (d <= interactDistance)
         {
-            PromptManager.Instance?.Clear(PromptKey);
-            return;
-        }
-
-        float distance = Vector3.Distance(player.position, transform.position);
-
-        if (distance <= interactDistance)
-        {
-            PromptManager.Instance?.Show(PromptKey, PromptMsg, PromptPriority.Interact);
+            PromptManager.Instance?.Show(interactPrompt, PromptPriority.Interact);
 
             if (interactAction.WasPressedThisFrame())
                 ActivateSword();
         }
         else
         {
-            PromptManager.Instance?.Clear(PromptKey);
+            PromptManager.Instance?.Clear(interactPrompt);
         }
     }
 
     private void ActivateSword()
     {
-        if (isActivated) return;
         isActivated = true;
+
+        PromptManager.Instance?.Clear(interactPrompt);
 
         fireEffect?.Play();
         if (swordLight != null) swordLight.enabled = true;
 
-        if (igniteSound != null && !igniteSound.isPlaying) igniteSound.Play();
-        if (hornSound != null && !hornSound.isPlaying) hornSound.Play();
-
-        PromptManager.Instance?.Clear(PromptKey);
-        PromptManager.Instance?.OverrideTimed("The sacred sword has been ignited!", true);
+        if (igniteSound != null) igniteSound.Play();
+        if (hornSound != null) hornSound.Play();
 
         gateController?.UnlockGate();
     }
