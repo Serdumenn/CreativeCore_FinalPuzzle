@@ -1,4 +1,3 @@
-// Assets/Scripts/PromptManager.cs
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,11 +8,8 @@ public class PromptManager : MonoBehaviour
     public static PromptManager Instance { get; private set; }
 
     [Header("UI (Prompt)")]
-    [Tooltip("Prompt text object (separate from MessageUI.messageText)")]
-    public TMP_Text promptText;
-
-    [Tooltip("Optional: root GameObject to enable/disable")]
-    public GameObject promptRoot;
+    [SerializeField] private TMP_Text promptText;
+    [SerializeField] private GameObject promptRoot;
 
     private class Entry
     {
@@ -23,8 +19,7 @@ public class PromptManager : MonoBehaviour
         public float lastSetTime;
     }
 
-    private readonly Dictionary<string, Entry> _entries = new Dictionary<string, Entry>();
-    private string _activeId = null;
+    private readonly Dictionary<string, Entry> entries = new Dictionary<string, Entry>();
 
     private void Awake()
     {
@@ -35,14 +30,14 @@ public class PromptManager : MonoBehaviour
         }
         Instance = this;
 
-        ApplyToUI(null);
+        ApplyUI(null);
     }
 
-    // --- New / Preferred API ---
+    // Preferred API
     public void Show(string message, string id, PromptPriority priority = PromptPriority.Info, bool force = false)
     {
         if (string.IsNullOrEmpty(id))
-            id = message; // fallback
+            id = message;
 
         if (string.IsNullOrEmpty(message))
         {
@@ -50,16 +45,14 @@ public class PromptManager : MonoBehaviour
             return;
         }
 
-        if (!_entries.TryGetValue(id, out var e))
+        if (!entries.TryGetValue(id, out var e))
         {
             e = new Entry { id = id };
-            _entries[id] = e;
+            entries[id] = e;
         }
 
-        // If same and not forced, don't churn
         if (!force && e.message == message && e.priority == priority)
         {
-            // still refresh selection in case active changed elsewhere
             Refresh();
             return;
         }
@@ -75,60 +68,55 @@ public class PromptManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(id)) return;
 
-        if (_entries.Remove(id))
-        {
-            if (_activeId == id) _activeId = null;
+        if (entries.Remove(id))
             Refresh();
-        }
     }
 
     public void ClearAll()
     {
-        _entries.Clear();
-        _activeId = null;
-        ApplyToUI(null);
+        entries.Clear();
+        ApplyUI(null);
     }
 
-    // --- Legacy API (keeps older calls compiling) ---
+    // Legacy overloads (repo’daki mevcut çağrıları bozmamak için)
     public void Show(string message, PromptPriority priority = PromptPriority.Info, bool force = false)
-    {
-        // legacy used message as key
-        Show(message, message, priority, force);
-    }
+        => Show(message, message, priority, force);
+
+    public void ClearMessageKey(string message)
+        => Clear(message);
 
     private void Refresh()
     {
-        if (_entries.Count == 0)
+        if (entries.Count == 0)
         {
-            ApplyToUI(null);
+            ApplyUI(null);
             return;
         }
 
-        var best = _entries.Values
+        var best = entries.Values
             .OrderByDescending(x => (int)x.priority)
             .ThenByDescending(x => x.lastSetTime)
             .FirstOrDefault();
 
-        ApplyToUI(best);
+        ApplyUI(best);
     }
 
-    private void ApplyToUI(Entry best)
+    private void ApplyUI(Entry e)
     {
         if (promptText == null)
         {
-            // Fail loudly once; otherwise silent.
+            // UI bağlanmadıysa sessizce çık (Console spam istemiyoruz)
             return;
         }
 
-        if (best == null || string.IsNullOrEmpty(best.message))
+        if (e == null || string.IsNullOrEmpty(e.message))
         {
             promptText.text = "";
             if (promptRoot != null) promptRoot.SetActive(false);
             return;
         }
 
-        _activeId = best.id;
-        promptText.text = best.message;
+        promptText.text = e.message;
         if (promptRoot != null) promptRoot.SetActive(true);
     }
 }

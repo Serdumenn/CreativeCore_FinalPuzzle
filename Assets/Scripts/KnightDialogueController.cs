@@ -1,4 +1,3 @@
-// Assets/Scripts/KnightDialogueController.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
 using TMPro;
@@ -13,21 +12,22 @@ public class KnightDialogueController : MonoBehaviour
     public KnightAnswerDatabase answerDatabase;
     public PlayerInput playerInput;
     public PlayerController playerController;
+    public SacredGateController gateController; // optional (recommend)
 
     [Header("Settings")]
     public string interactPrompt = "Press [E] to speak";
     public float interactDistance = 3.5f;
     public Transform player;
-    [Min(0f)] public float answerDisplaySeconds = 1.5f;
-    [Min(0f)] public float endDelaySeconds = 4f;
+    [Min(0f)] public float answerDisplaySeconds = 2.5f;
+    [Min(0f)] public float endDelaySeconds = 4.5f;
     [TextArea] public string finalMessage = "Now I will send you...";
+    [TextArea] public string lockedMessage = "Prove yourself first. Ignite the Sacred Sword and unlock the gate.";
 
     private InputAction interactAction;
     private bool panelOpen;
     private bool wasCursorVisible;
     private CursorLockMode previousLockMode;
     private string currentActionMap;
-    private bool warnedMissingInteract;
     private bool isEnding;
     private Coroutine endingCo;
 
@@ -38,10 +38,7 @@ public class KnightDialogueController : MonoBehaviour
         promptId = $"KnightPrompt:{GetInstanceID()}";
 
         if (player == null)
-        {
-            GameObject p = GameObject.FindGameObjectWithTag("Player");
-            if (p != null) player = p.transform;
-        }
+            player = GameObject.FindGameObjectWithTag("Player")?.transform;
 
         if (playerInput == null && player != null)
             playerInput = player.GetComponent<PlayerInput>();
@@ -54,16 +51,6 @@ public class KnightDialogueController : MonoBehaviour
             interactAction = playerInput.actions?.FindAction("Interact", throwIfNotFound: false);
             interactAction?.Enable();
             currentActionMap = playerInput.currentActionMap?.name;
-
-            if (interactAction == null && !warnedMissingInteract)
-            {
-                Debug.LogWarning("[KnightDialogue] Interact action not found. Check Input Action Asset for an action named 'Interact'.");
-                warnedMissingInteract = true;
-            }
-        }
-        else
-        {
-            Debug.LogWarning("[KnightDialogue] PlayerInput not assigned; UI will not open.");
         }
     }
 
@@ -84,16 +71,13 @@ public class KnightDialogueController : MonoBehaviour
             questionUI.OnClose -= ClosePanel;
         }
 
-        if (interactAction != null)
-            interactAction.Disable();
-
         PromptManager.Instance?.Clear(promptId);
     }
 
     private void Update()
     {
         if (panelOpen || isEnding) return;
-        if (player == null) return;
+        if (player == null || interactAction == null) return;
 
         float distance = Vector3.Distance(player.position, transform.position);
         if (distance > interactDistance)
@@ -102,22 +86,19 @@ public class KnightDialogueController : MonoBehaviour
             return;
         }
 
-        PromptManager.Instance?.Show(interactPrompt, promptId, PromptPriority.Critical);
-
-        if (interactAction == null)
+        // Gate şartı (önerilen)
+        if (gateController != null && !gateController.IsUnlocked)
         {
-            if (!warnedMissingInteract)
-            {
-                Debug.LogWarning("[KnightDialogue] Interact action is null; cannot open dialogue.");
-                warnedMissingInteract = true;
-            }
+            PromptManager.Instance?.Show(lockedMessage, promptId, PromptPriority.Warning);
+            // istersek E basınca sadece timed bir uyarı da gösterebiliriz
+            if (interactAction.WasPressedThisFrame() && messageUI != null)
+                messageUI.ShowTimed(lockedMessage, 2.0f, force: true);
             return;
         }
 
-        if (!interactAction.enabled)
-            interactAction.Enable();
+        PromptManager.Instance?.Show(interactPrompt, promptId, PromptPriority.Critical);
 
-        if (interactAction.WasPerformedThisFrame())
+        if (interactAction.WasPressedThisFrame())
             OpenPanel();
     }
 
@@ -141,7 +122,7 @@ public class KnightDialogueController : MonoBehaviour
         questionUI?.Show();
 
         if (answerText != null)
-            answerText.text = "";
+            answerText.text = string.Empty;
     }
 
     private void ClosePanel()
@@ -155,6 +136,7 @@ public class KnightDialogueController : MonoBehaviour
         panelOpen = false;
 
         RestoreCursor();
+
         if (restorePlayer)
             RestorePlayerInput();
 
@@ -166,8 +148,7 @@ public class KnightDialogueController : MonoBehaviour
 
     private void HandleQuestionSelected(int index)
     {
-        if (answerDatabase == null) return;
-        if (answerDatabase.answers == null) return;
+        if (answerDatabase == null || answerDatabase.answers == null) return;
         if (index < 0 || index >= answerDatabase.answers.Length) return;
         if (isEnding) return;
 
@@ -196,14 +177,12 @@ public class KnightDialogueController : MonoBehaviour
 
         UnlockCursor();
 
-        // 1) Answer timed message
         if (messageUI != null)
             messageUI.ShowTimed(answer, answerDisplaySeconds, force: true);
 
         if (answerDisplaySeconds > 0f)
             yield return new WaitForSecondsRealtime(answerDisplaySeconds);
 
-        // 2) Final timed message
         if (messageUI != null)
             messageUI.ShowTimed(finalMessage, endDelaySeconds, force: true);
 

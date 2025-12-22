@@ -1,4 +1,3 @@
-// Assets/Scripts/SacredSwordController.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -21,7 +20,6 @@ public class SacredSwordController : MonoBehaviour
     private InputAction interactAction;
 
     private string promptId;
-    private const string InteractPrompt = "Press [E] to ignite the sacred sword.";
 
     private void Start()
     {
@@ -37,14 +35,7 @@ public class SacredSwordController : MonoBehaviour
         if (playerInput != null)
         {
             interactAction = playerInput.actions?.FindAction("Interact", false);
-            if (interactAction == null)
-                Debug.LogWarning("[SacredSword] Interact action not found on PlayerInput.");
-            else
-                interactAction.Enable();
-        }
-        else
-        {
-            Debug.LogWarning("[SacredSword] PlayerInput reference missing; sword cannot be ignited.");
+            interactAction?.Enable();
         }
     }
 
@@ -65,7 +56,7 @@ public class SacredSwordController : MonoBehaviour
         float distance = Vector3.Distance(player.position, transform.position);
         if (distance < interactDistance)
         {
-            PromptManager.Instance?.Show(InteractPrompt, promptId, PromptPriority.Interact);
+            PromptManager.Instance?.Show("Press [E] to ignite the sacred sword.", promptId, PromptPriority.Interact);
 
             if (interactAction.WasPressedThisFrame())
                 ActivateSword();
@@ -93,8 +84,6 @@ public class SacredSwordController : MonoBehaviour
             messageUI.ShowTimed("The sacred sword has been ignited!", 2.0f, force: true);
 
         gateController?.UnlockGate();
-
-        Debug.Log("[SacredSword] Sacred sword ignited.");
     }
 
     public bool IsActivated() => isActivated;

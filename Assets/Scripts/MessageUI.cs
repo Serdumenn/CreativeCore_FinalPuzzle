@@ -1,4 +1,3 @@
-// Assets/Scripts/MessageUI.cs
 using System.Collections;
 using UnityEngine;
 using TMPro;
@@ -10,7 +9,7 @@ public class MessageUI : MonoBehaviour
     [Header("UI (Timed Messages)")]
     public TMP_Text messageText;
 
-    [Header("Timing (Default)")]
+    [Header("Timing")]
     [Min(0.0f)] public float fadeInTime  = 0.18f;
     [Min(0.05f)] public float holdTime   = 1.20f;
     [Min(0.0f)] public float fadeOutTime = 0.22f;
@@ -30,26 +29,11 @@ public class MessageUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Uses default holdTime.
-    /// </summary>
     public void ShowMessage(string message, bool force = false)
     {
-        if (messageText == null || string.IsNullOrEmpty(message)) return;
-
-        bool same = (lastMessage == message);
-        if (same && showCo != null && !force) return;
-
-        lastMessage = message;
-        mode = DisplayMode.Timed;
-
-        if (showCo != null) StopCoroutine(showCo);
-        showCo = StartCoroutine(ShowRoutine(message, holdTime));
+        ShowTimed(message, holdTime, force);
     }
 
-    /// <summary>
-    /// Per-call hold duration override. This is what your Knight end-flow should use.
-    /// </summary>
     public void ShowTimed(string message, float seconds, bool force = true)
     {
         if (messageText == null || string.IsNullOrEmpty(message)) return;
@@ -106,7 +90,6 @@ public class MessageUI : MonoBehaviour
             messageText.alpha = 1f;
         }
 
-        // Hold
         if (holdSeconds > 0f)
             yield return new WaitForSecondsRealtime(holdSeconds);
 

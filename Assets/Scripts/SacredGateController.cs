@@ -1,27 +1,54 @@
-// Assets/Scripts/SacredGateController.cs
 using UnityEngine;
 
 public class SacredGateController : MonoBehaviour
 {
     [Header("References")]
-    public DoorController gateDoor;     // Gate üzerindeki DoorController
+    public DoorController doorController;
     public MessageUI messageUI;
 
-    [Header("State")]
+    [Header("Settings")]
+    public float interactDistance = 5f;
+
+    private Transform player;
+
     [SerializeField] private bool isUnlocked = false;
     public bool IsUnlocked => isUnlocked;
 
-    [Header("Optional Messages")]
-    [TextArea] public string unlockedMessage = "The gate is now unlocked.";
-    public float unlockedMessageSeconds = 2.0f;
+    private string promptId;
+
+    private void Awake()
+    {
+        promptId = $"GatePrompt:{GetInstanceID()}";
+
+        if (doorController != null)
+            doorController.SetLocked(true);
+    }
 
     private void Start()
     {
-        if (gateDoor == null)
-            gateDoor = GetComponentInChildren<DoorController>();
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
+    }
 
-        if (!isUnlocked && gateDoor != null)
-            gateDoor.SetLocked(true);
+    private void Update()
+    {
+        if (player == null || doorController == null) return;
+
+        float d = Vector3.Distance(player.position, transform.position);
+        if (d > interactDistance)
+        {
+            PromptManager.Instance?.Clear(promptId);
+            return;
+        }
+
+        if (!isUnlocked)
+        {
+            // Kalıcı prompt: “önce sword”
+            PromptManager.Instance?.Show("Ignite the Sacred Sword first!", promptId, PromptPriority.Warning);
+            return;
+        }
+
+        // Gate unlocked -> gate prompt artık kapansın (door kendi promptunu basacak)
+        PromptManager.Instance?.Clear(promptId);
     }
 
     public void UnlockGate()
@@ -29,12 +56,14 @@ public class SacredGateController : MonoBehaviour
         if (isUnlocked) return;
         isUnlocked = true;
 
-        if (gateDoor != null)
-            gateDoor.SetLocked(false);
+        if (doorController != null)
+            doorController.SetLocked(false);
 
-        if (messageUI != null && !string.IsNullOrEmpty(unlockedMessage))
-            messageUI.ShowTimed(unlockedMessage, unlockedMessageSeconds, force: true);
+        PromptManager.Instance?.Clear(promptId);
 
-        Debug.Log("[SacredGate] Gate unlocked.");
+        if (messageUI != null)
+            messageUI.ShowTimed("The sacred gate is now unlocked.", 2.0f, force: true);
+
+        Debug.Log("[SacredGate] Unlocked.");
     }
 }
